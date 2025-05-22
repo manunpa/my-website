@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GPS Dashboard</title>
+  <title>Customer Stations Map</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
@@ -33,7 +33,7 @@
   <div id="app" class="flex flex-col h-full">
     <!-- Top menu -->
     <header class="flex items-center justify-between bg-[#001F3F] px-6 py-3 shadow-md">
-      <div class="text-xl font-semibold tracking-wide">🛰️ GPS Dashboard</div>
+      <div class="text-xl font-semibold tracking-wide">🛰️ Customer Stations Map</div>
       <nav class="space-x-6 text-cyan-300">
         <button class="hover:text-cyan-100 transition">Home</button>
         <button class="hover:text-cyan-100 transition">Fleet</button>
@@ -45,7 +45,7 @@
     <div class="flex flex-1 overflow-hidden">
       <!-- Left panel: Vehicle list -->
       <aside id="leftPanel" class="w-72 bg-[#002244] p-4 overflow-y-auto border-r border-cyan-600 flex flex-col">
-        <h2 class="mb-4 font-bold text-cyan-300 text-lg">🚗 Vehicle Registry</h2>
+        <h2 class="mb-4 font-bold text-cyan-300 text-lg">🚗 Station List</h2>
         <input 
           type="text" 
           id="searchInput" 
@@ -71,28 +71,27 @@
     </div>
   </div>
 
+  <!-- Leaflet -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- PapaParse for CSV parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  
   <script>
-    const vehicles = [
-      { name: "191498 บริษัท เต็มสิบพลังงาน จำกัด", lat: 12.8320067875631, lng: 101.128117250148 },
-      { name: "227169 บริษัท ภูมิพัฒน์ 2019 จำกัด (มาบไผ่)", lat: 13.3628943391819, lng: 101.121650029693 },
-      { name: "240436 บริษัท เก้าธนะ จำกัด บางละมุง", lat: 13.0569143184301, lng: 100.919904396717 },
-      { name: "269455 บริษัท ปิ่นบุรีเชื้อเพลิง จำกัด สาขาที", lat: 13.481164003263, lng: 101.281572992526 },
-      { name: "100376 บริษัท บางพัฒนา 1-2-3-4 บริการ จำกัด", lat: 13.7281349756442, lng: 100.642176785003 },
-      { name: "100856 ห้างหุ้นส่วนจำกัด บิ๊กเซอร์วิส", lat: 13.927681280709, lng: 100.413170587206 },
-      { name: "101347 หสน.เจริญสุขอยธยา", lat: 14.3534874866659, lng: 100.586044758118 },
-      { name: "101658 บริษัท โชคอนันต์ชุมพร จำกัด", lat: 10.492079, lng: 99.183006 },
-      { name: "101658 บริษัท โชคอนันต์ชุมพร จำกัด", lat: 10.492079, lng: 99.183006 },
-      { name: "102212 ห้างหุ้นส่วนจำกัด ดุษดี พาณิชย์", lat: 14.0404977426203, lng: 100.476458956132 },
-      { name: "105879 หจก.พรพิชัยปราจีนบุรี", lat: 14.0537040838508, lng: 101.367135892607 },
-      { name: "106599 บริษัท ส.เจริญรุ่งบริการ จำกัด", lat: 13.8913419709038, lng: 100.605637366622 },
-      { name: "106889 ห้างหุ้นส่วนจำกัด สหโชคบริการ", lat: 13.786474158775, lng: 100.487425600639 },
-      { name: "107033 ห้างหุ้นส่วนจำกัด สำเภาเงินบริการ", lat: 13.8563308541746, lng: 100.864050146475 },
-      { name: "108082 BSRC บริษัท ส.กิตติเจริญบริการ จำกัด", lat: 13.9350196373281, lng: 100.728806304431 },
-      { name: "108385 ห้างหุ้นส่วนจำกัด ศุภมิตรบริการ คลองด่าน", lat: 13.5102721429243, lng: 100.811321012431 },
-      { name: "109881 บริษัท ทุ่งทองภูเก็ต จำกัด", lat: 7.901645, lng: 98.367499 },
-      { name: "110583 ห้างหุ้นส่วนจำกัด วี ออยล์ กรุ๊ป", lat: 12.6806349371333, lng: 100.894405549092 },
-    ];
+    // ตัวแปรเก็บข้อมูลสถานี (จะโหลดจาก CSV)
+    let vehicles = [];
+
+    // โหลดไฟล์ CSV จาก path 'data/stations.csv'
+    async function loadCSV() {
+      const response = await fetch('data/stations.csv');
+      const csvText = await response.text();
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+      vehicles = parsed.data.map(row => ({
+        name: row.name || row.Name || row.NAME,
+        lat: parseFloat(row.lat || row.Lat || row.LAT),
+        lng: parseFloat(row.lng || row.Lng || row.LNG)
+      })).filter(v => v.name && !isNaN(v.lat) && !isNaN(v.lng));
+      displayVehicles();
+    }
 
     // Initialize map
     const map = L.map('map').setView([13.7563, 100.5018], 13);
@@ -109,7 +108,6 @@
       maxZoom: 20
     });
 
-    // Add default layer
     osmLayer.addTo(map);
 
     // Layer switcher
@@ -117,12 +115,8 @@
     layerSelect.addEventListener('change', e => {
       if (map.hasLayer(osmLayer)) map.removeLayer(osmLayer);
       if (map.hasLayer(satelliteLayer)) map.removeLayer(satelliteLayer);
-
-      if (e.target.value === 'osm') {
-        osmLayer.addTo(map);
-      } else if (e.target.value === 'satellite') {
-        satelliteLayer.addTo(map);
-      }
+      if (e.target.value === 'osm') osmLayer.addTo(map);
+      else if (e.target.value === 'satellite') satelliteLayer.addTo(map);
     });
 
     // Custom car icon
@@ -135,7 +129,7 @@
 
     const markers = [];
 
-    // Render vehicle list in left panel
+    // Vehicle list DOM
     const vehicleListEl = document.getElementById('vehicleList');
     const searchInput = document.getElementById('searchInput');
 
@@ -168,13 +162,14 @@
       });
     }
 
-    // Search input event
     searchInput.addEventListener('input', e => {
       displayVehicles(e.target.value);
     });
 
-    displayVehicles();
+    // โหลด CSV แล้วแสดงผล
+    loadCSV();
   </script>
 </body>
 </html>
+
 
