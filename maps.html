@@ -19,7 +19,6 @@
       border-radius: 0 0 0.5rem 0;
       box-shadow: 0 0 15px #00ffffaa;
     }
-    /* custom scrollbar for left panel */
     #leftPanel::-webkit-scrollbar {
       width: 8px;
     }
@@ -28,42 +27,70 @@
       border-radius: 4px;
     }
   </style>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7HPOhloICyxEyDTfR8yRiH2rT--q4fVo",
+      authDomain: "my-login-project-26857.firebaseapp.com",
+      projectId: "my-login-project-26857",
+      storageBucket: "my-login-project-26857.appspot.com",
+      messagingSenderId: "199741800244",
+      appId: "1:199741800244:web:41b413f67038c687dc2f61"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+      }
+    });
+
+    window.logout = async function () {
+      try {
+        await signOut(auth);
+        alert("\uD83D\uDC4B Logged out successfully");
+        window.location.href = "login.html";
+      } catch (err) {
+        alert("\u274C Logout failed: " + err.message);
+      }
+    };
+  </script>
 </head>
 <body>
   <div id="app" class="flex flex-col h-full">
-    <!-- Top menu -->
     <header class="flex items-center justify-between bg-[#001F3F] px-6 py-3 shadow-md">
-      <div class="text-xl font-semibold tracking-wide">🛰️ Customer Stations Map</div>
-      <nav class="space-x-6 text-cyan-300">
+      <div class="text-xl font-semibold tracking-wide">\uD83D\uDE80 Customer Stations Map</div>
+      <nav class="space-x-6 text-cyan-300 flex items-center">
         <button class="hover:text-cyan-100 transition">Home</button>
         <button class="hover:text-cyan-100 transition">Fleet</button>
         <button class="hover:text-cyan-100 transition">Settings</button>
+        <button onclick="logout()" class="ml-4 px-3 py-1 bg-cyan-600 rounded hover:bg-cyan-700 transition text-white text-sm">Logout</button>
       </nav>
     </header>
 
-    <!-- Main content -->
     <div class="flex flex-1 overflow-hidden">
-      <!-- Left panel: Vehicle list -->
       <aside id="leftPanel" class="w-72 bg-[#002244] p-4 overflow-y-auto border-r border-cyan-600 flex flex-col">
-        <h2 class="mb-4 font-bold text-cyan-300 text-lg">🚗 Station List</h2>
+        <h2 class="mb-4 font-bold text-cyan-300 text-lg">\uD83D\uDE97 Station List</h2>
         <input 
           type="text" 
           id="searchInput" 
-          placeholder="ค้นหาสถานี..." 
+          placeholder="\u0E04\u0E49\u0E19\u0E2B\u0E32\u0E2A\u0E16\u0E32\u0E19\u0E35..." 
           class="mb-4 p-2 rounded bg-[#003355] text-cyan-100 placeholder-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400"
         />
         <ul id="vehicleList" class="space-y-3 overflow-y-auto flex-1">
-          <!-- JS will inject list here -->
         </ul>
       </aside>
 
-      <!-- Right panel: Map -->
       <main class="flex-1 relative flex flex-col">
         <div class="p-2 bg-[#001F3F] text-cyan-300 flex items-center space-x-3 border-b border-cyan-600">
-          <label for="layerSelect" class="font-semibold select-none">แผนที่:</label>
+          <label for="layerSelect" class="font-semibold select-none">\u0E41\u0E1C\u0E19\u0E17\u0E35:\n</label>
           <select id="layerSelect" class="bg-[#003355] text-cyan-200 rounded px-2 py-1 focus:outline-none">
             <option value="osm">OpenStreetMap</option>
-            <option value="satellite">ดาวเทียม</option>
+            <option value="satellite">\u0E14\u0E32\u0E27\u0E40\u0E17\u0E35\u0E22\u0E21</option>
           </select>
         </div>
         <div id="map" class="flex-1"></div>
@@ -71,16 +98,12 @@
     </div>
   </div>
 
-  <!-- Leaflet -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- PapaParse for CSV parsing -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  
+
   <script>
-    // ตัวแปรเก็บข้อมูลสถานี (จะโหลดจาก CSV)
     let vehicles = [];
 
-    // โหลดไฟล์ CSV จาก path 'data/stations.csv'
     async function loadCSV() {
       const response = await fetch('data/stations.csv');
       const csvText = await response.text();
@@ -93,10 +116,8 @@
       displayVehicles();
     }
 
-    // Initialize map
     const map = L.map('map').setView([13.7563, 100.5018], 13);
 
-    // Base layers
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
     });
@@ -110,7 +131,6 @@
 
     osmLayer.addTo(map);
 
-    // Layer switcher
     const layerSelect = document.getElementById('layerSelect');
     layerSelect.addEventListener('change', e => {
       if (map.hasLayer(osmLayer)) map.removeLayer(osmLayer);
@@ -119,7 +139,6 @@
       else if (e.target.value === 'satellite') satelliteLayer.addTo(map);
     });
 
-    // Custom car icon
     const carIcon = L.icon({
       iconUrl: 'https://www.freepnglogos.com/uploads/mr-bean-png/mr-bean-bean-waving-transparent-png-stickpng-2.png',
       iconSize: [40, 40],
@@ -128,8 +147,6 @@
     });
 
     const markers = [];
-
-    // Vehicle list DOM
     const vehicleListEl = document.getElementById('vehicleList');
     const searchInput = document.getElementById('searchInput');
 
@@ -141,7 +158,6 @@
       const filtered = vehicles.filter(v => v.name.toLowerCase().includes(filter.toLowerCase()));
 
       filtered.forEach(v => {
-        // List item
         const li = document.createElement('li');
         li.textContent = v.name;
         li.className = 'cursor-pointer px-3 py-2 rounded bg-[#003355] hover:bg-cyan-600 transition';
@@ -153,7 +169,6 @@
         };
         vehicleListEl.appendChild(li);
 
-        // Marker
         const marker = L.marker([v.lat, v.lng], { icon: carIcon })
           .addTo(map)
           .bindPopup(`<b>${v.name}</b><br>Lat: ${v.lat.toFixed(6)}<br>Lng: ${v.lng.toFixed(6)}`)
@@ -166,10 +181,10 @@
       displayVehicles(e.target.value);
     });
 
-    // โหลด CSV แล้วแสดงผล
     loadCSV();
   </script>
 </body>
 </html>
+
 
 
