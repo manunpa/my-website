@@ -9,38 +9,44 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
   <style>
-    body, html, #app {
-      height: 100%; margin: 0;
-      background: linear-gradient(135deg, #0f0f2f, #1a1a2e);
-      color: #00ffff;
-      font-family: 'Courier New', monospace;
+  body, html, #app {
+    height: 100%; margin: 0;
+    background: linear-gradient(135deg, #0f0f2f, #1a1a2e);
+    color: #00ffff;
+    font-family: 'Courier New', monospace;
+  }
+  #map {
+    height: 100%;
+    border-radius: 0 0 0.5rem 0;
+    box-shadow: 0 0 15px #00ffffaa;
+  }
+  #leftPanel::-webkit-scrollbar { width: 8px; }
+  #leftPanel::-webkit-scrollbar-thumb {
+    background-color: #00ffffaa;
+    border-radius: 4px;
+  }
+  @media (max-width: 768px) {
+    #app > div.flex-1 { flex-direction: column; height: 100%; }
+    #leftPanel {
+      width: 100% !important;
+      height: 200px;
+      border-right: none;
+      border-bottom: 2px solid #00ffffaa;
+      overflow-x: auto; overflow-y: hidden;
+      flex-shrink: 0;
     }
-    #map {
-      height: 100%;
-      border-radius: 0 0 0.5rem 0;
-      box-shadow: 0 0 15px #00ffffaa;
+    main {
+      height: calc(100% - 200px);
+      flex: 1 1 auto; min-height: 0;
     }
-    #leftPanel::-webkit-scrollbar { width: 8px; }
-    #leftPanel::-webkit-scrollbar-thumb {
-      background-color: #00ffffaa;
-      border-radius: 4px;
-    }
-    @media (max-width: 768px) {
-      #app > div.flex-1 { flex-direction: column; height: 100%; }
-      #leftPanel {
-        width: 100% !important;
-        height: 200px;
-        border-right: none;
-        border-bottom: 2px solid #00ffffaa;
-        overflow-x: auto; overflow-y: hidden;
-        flex-shrink: 0;
-      }
-      main {
-        height: calc(100% - 200px);
-        flex: 1 1 auto; min-height: 0;
-      }
-    }
-  </style>
+  }
+
+  /* 🔽 เพิ่มส่วนนี้เข้ามาเท่านั้น ไม่ต้องลบอะไรเลย */
+  .leaflet-marker-icon div {
+    color: black !important;
+  }
+</style>
+  
 </head>
 <body>
 <div id="app" class="flex flex-col h-full">
