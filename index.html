@@ -55,7 +55,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js";
 
   // ✅ ใส่ config Firebase ของคุณตรงนี้
   const firebaseConfig = {
@@ -70,6 +70,14 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
+  // เช็คสถานะล็อกอินตอนโหลดหน้า ถ้าล็อกอินอยู่แล้วให้ไป maps ทันที
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      // ใช้ replace() แทน href เพื่อไม่เก็บหน้า login ใน history
+      window.location.replace("maps.html");
+    }
+  });
+
   const loginForm = document.getElementById("loginForm");
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -79,17 +87,17 @@
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       alert(`✅ Welcome back, ${userCredential.user.email}!`);
-      window.location.href = "maps.html"; // 🔁 เปลี่ยนไปหน้า maps หลัง login สำเร็จ
+      // เปลี่ยนจาก href เป็น replace เพื่อไม่เก็บหน้า login ใน history
+      window.location.replace("maps.html");
     } catch (error) {
       alert(`❌ Login failed: ${error.message}`);
     }
   });
 </script>
 
-
-
 </body>
 </html>
+
 
 
 
