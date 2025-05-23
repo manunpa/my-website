@@ -57,11 +57,12 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js";
 
+  // ✅ ใส่ config Firebase ของคุณตรงนี้
   const firebaseConfig = {
     apiKey: "AIzaSyD7HPOhloICyxEyDTfR8yRiH2rT--q4fVo",
     authDomain: "my-login-project-26857.firebaseapp.com",
     projectId: "my-login-project-26857",
-    storageBucket: "my-login-project-26857.firebasestorage.app",
+    storageBucket: "my-login-project-26857.appspot.com",
     messagingSenderId: "199741800244",
     appId: "1:199741800244:web:41b413f67038c687dc2f61"
   };
@@ -78,12 +79,13 @@
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       alert(`✅ Welcome back, ${userCredential.user.email}!`);
-      window.location.href = "main.html"; // ปรับชื่อไฟล์ปลายทางตามต้องการ
+      window.location.href = "maps.html"; // 🔁 เปลี่ยนไปหน้า maps หลัง login สำเร็จ
     } catch (error) {
       alert(`❌ Login failed: ${error.message}`);
     }
   });
 </script>
+
 
 
 </body>
