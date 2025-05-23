@@ -100,22 +100,25 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  onAuthStateChanged(auth, user => {
-    if (!user) {
-      alert("🚫 Access denied. Please log in first.");
-      window.location.href = "index.html";
-    }
-  });
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    alert("🚫 Access denied. Please log in first.");
+    window.location.href = "index.html";
+  } else {
+    // ✅ เริ่มจับเวลาเมื่อยืนยันว่า user ล็อกอินแล้ว
+    setTimeout(async () => {
+      try {
+        await signOut(auth);
+        alert("⏳ Session expired. You have been logged out.");
+        window.location.href = "index.html";
+      } catch (error) {
+        alert("❌ Auto logout failed: " + error.message);
+        window.location.href = "index.html";
+      }
+    }, 10 * 60 * 1000); // 10 นาที
+  }
+});
 
-  document.getElementById("logoutBtn").addEventListener("click", async () => {
-    try {
-      await signOut(auth);
-      alert("👋 Logged out successfully!");
-      window.location.href = "index.html";
-    } catch (error) {
-      alert("❌ Logout failed: " + error.message);
-    }
-  });
 
   let vehicles = [];
   const markers = L.markerClusterGroup();
