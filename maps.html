@@ -26,6 +26,64 @@
       background-color: #00ffffaa;
       border-radius: 4px;
     }
+
+    /* ======== Responsive CSS ======== */
+    /* Layout ปกติเป็น flex-row (ซ้ายขวา) */
+    #app > div.flex-1 {
+      display: flex;
+      flex-direction: row;
+      overflow: hidden;
+    }
+
+    /* เมื่อหน้าจอเล็กกว่าหรือเท่ากับ 768px ให้เปลี่ยน layout เป็น column (บนล่าง) */
+    @media (max-width: 768px) {
+      #app > div.flex-1 {
+        flex-direction: column;
+        height: 100%;
+      }
+      #leftPanel {
+        width: 100% !important;
+        height: 200px;
+        border-right: none;
+        border-bottom: 2px solid #00ffffaa;
+        overflow-x: auto;
+        overflow-y: hidden;
+        flex-shrink: 0;
+        border-radius: 0 0 0.5rem 0;
+      }
+      main {
+        height: calc(100% - 200px);
+        flex: 1 1 auto;
+        min-height: 0; /* important สำหรับ flex container ให้ child scroll ได้ */
+      }
+      #map {
+        height: 100% !important;
+        border-radius: 0 0 0.5rem 0;
+      }
+    }
+
+    /* เพิ่มสวยงามในมือถือขนาดเล็กอีกที */
+    @media (max-width: 480px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      nav {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+      nav button {
+        flex-grow: 1;
+        margin: 2px 0;
+        padding: 0.5rem 0;
+        font-size: 0.9rem;
+      }
+      #searchInput {
+        font-size: 0.9rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -44,7 +102,7 @@
         </button>
       </nav>
     </header>
-    <div class="flex flex-1 overflow-hidden">
+    <div class="flex-1 overflow-hidden">
       <aside id="leftPanel" class="w-72 bg-[#002244] p-4 overflow-y-auto border-r border-cyan-600 flex flex-col">
         <h2 class="mb-4 font-bold text-cyan-300 text-lg">🚗 Station List</h2>
         <input 
@@ -202,6 +260,7 @@
   </script>
 </body>
 </html>
+
 
 
 
