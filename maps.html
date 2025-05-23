@@ -100,13 +100,24 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
+// Keep track of the auto-logout timer
+let autoLogoutTimer;
+
 onAuthStateChanged(auth, user => {
   if (!user) {
     alert("🚫 Access denied. Please log in first.");
     window.location.href = "index.html";
+    // Clear any existing timer if the user is somehow logged out (e.g., manually from another tab)
+    if (autoLogoutTimer) {
+      clearTimeout(autoLogoutTimer);
+    }
   } else {
     // ✅ เริ่มจับเวลาเมื่อยืนยันว่า user ล็อกอินแล้ว
-    setTimeout(async () => {
+    // Clear previous timer to prevent multiple timers running if onAuthStateChanged fires again
+    if (autoLogoutTimer) {
+      clearTimeout(autoLogoutTimer);
+    }
+    autoLogoutTimer = setTimeout(async () => {
       try {
         await signOut(auth);
         alert("⏳ Session expired. You have been logged out.");
@@ -116,6 +127,21 @@ onAuthStateChanged(auth, user => {
         window.location.href = "index.html";
       }
     }, 10 * 60 * 1000); // 10 นาที
+  }
+});
+
+// Add event listener for the Logout button
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  try {
+    await signOut(auth);
+    alert("✅ Logged out successfully.");
+    // Clear auto-logout timer when manually logging out
+    if (autoLogoutTimer) {
+      clearTimeout(autoLogoutTimer);
+    }
+    window.location.href = "index.html";
+  } catch (error) {
+    alert("❌ Logout failed: " + error.message);
   }
 });
 
