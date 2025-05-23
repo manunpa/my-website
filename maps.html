@@ -191,6 +191,19 @@
   }
 
   loadCSV();
+
+  // เพิ่มตัวจับเวลาเพื่อ logout หลัง 10 นาที
+  setTimeout(async () => {
+    try {
+      await signOut(auth);
+      alert("⏳ Session expired. You have been logged out.");
+      window.location.href = "index.html";
+    } catch (error) {
+      alert("❌ Auto logout failed: " + error.message);
+      window.location.href = "index.html";
+    }
+  }, 10 * 60 * 1000);
+
 </script>
 </body>
 </html>
