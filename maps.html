@@ -37,11 +37,12 @@
         <button class="hover:text-cyan-100 transition">Fleet</button>
         <button class="hover:text-cyan-100 transition">Settings</button>
         <button
-        id="logoutBtn"
-        class="ml-8 px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition shadow-lg border-2 border-cyan-400"
-      >
-        Logout
-      </button>
+          id="logoutBtn"
+          class="ml-8 px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition shadow-lg border-2 border-cyan-400"
+        >
+          Logout
+        </button>
+      </nav>
     </header>
     <div class="flex flex-1 overflow-hidden">
       <aside id="leftPanel" class="w-72 bg-[#002244] p-4 overflow-y-auto border-r border-cyan-600 flex flex-col">
@@ -102,6 +103,25 @@
       } catch (error) {
         alert("❌ Logout failed: " + error.message);
       }
+    });
+
+    // Auto logout after 10 minutes inactivity
+    const AUTO_LOGOUT_TIME = 10 * 60 * 1000; // 10 นาที
+    let logoutTimer = setTimeout(logoutUser, AUTO_LOGOUT_TIME);
+
+    function logoutUser() {
+      alert("⏰ หมดเวลาการใช้งาน 10 นาที กรุณาเข้าสู่ระบบใหม่");
+      signOut(auth).then(() => {
+        window.location.href = "index.html";
+      });
+    }
+
+    // รีเซ็ตเวลานับใหม่เมื่อมีการเคลื่อนไหวหรือใช้งาน
+    ['click', 'keydown', 'mousemove', 'scroll'].forEach(evt => {
+      window.addEventListener(evt, () => {
+        clearTimeout(logoutTimer);
+        logoutTimer = setTimeout(logoutUser, AUTO_LOGOUT_TIME);
+      });
     });
 
     let vehicles = [];
@@ -182,6 +202,7 @@
   </script>
 </body>
 </html>
+
 
 
 
