@@ -9,6 +9,11 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
   <style>
+    .marker-cluster div {
+      color: black !important;
+      text-shadow: none !important;
+   }
+
     body, html, #app {
       height: 100%; margin: 0;
       background: linear-gradient(135deg, #0f0f2f, #1a1a2e);
@@ -39,11 +44,6 @@
         height: calc(100% - 200px);
         flex: 1 1 auto; min-height: 0;
       }
-      .marker-cluster div {
-        color: black !important;
-        text-shadow: none !important;
-      }
-
     }
   </style>
 </head>
