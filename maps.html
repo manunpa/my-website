@@ -28,7 +28,13 @@
     height: 100%;
     border-radius: 0 0 0.5rem 0;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-  }
+  }/* ลวดลายกราฟิกโทนเทา-ขาวสำหรับ Header */
+.header-pattern {
+  background-color: #ffffff;
+  background-image: linear-gradient(90deg, #f1f5f9 1px, transparent 1px), 
+                    linear-gradient(180deg, #f1f5f9 1px, transparent 1px);
+  background-size: 20px 20px;
+}
   #leftPanel::-webkit-scrollbar { width: 8px; }
   #leftPanel::-webkit-scrollbar-thumb {
     background-color: #9ca3af;
@@ -59,7 +65,7 @@
 </head>
 <body>
 <div id="app" class="flex flex-col h-full">
-  <header class="flex items-center justify-between bg-white text-gray-800 px-6 py-6 shadow-md border-b border-gray-200">
+  <header class="header-pattern flex items-center justify-between bg-white text-gray-800 px-6 py-6 shadow-md border-b border-gray-200">
     <div class="text-xl font-semibold tracking-wide">🛡️ Customer Stations Map</div>
     <div class="flex items-center space-x-6">
         <nav class="flex flex-col items-end gap-y-2 text-gray-600">
