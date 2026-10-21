@@ -62,7 +62,7 @@
   <header class="flex items-center justify-between bg-white text-gray-800 px-6 py-6 shadow-md border-b border-gray-200">
     <div class="text-xl font-semibold tracking-wide">🛡️ Customer Stations Map</div>
     <nav class="flex flex-col items-end gap-y-2 text-gray-600">
-    <!-- แถวที่ 1 (ปุ่มชุดเดิม) -->
+    <!-- แถวที่ 1 -->
     <div class="flex items-center space-x-6">
         <button class="hover:text-blue-600 transition">Home</button>
         <a href="alert-rate.html" class="hover:text-blue-600 transition">อัตราการแจ้งเตือน</a>
@@ -72,18 +72,17 @@
         <a href="https://tttwli.com/login.html" target="_blank" class="hover:text-blue-600 transition">Smart Logistics</a>
     </div>
 
-    <!-- แถวที่ 2 (แถวใหม่สำหรับใส่ปุ่มเพิ่มตามต้องการ) -->
+    <!-- แถวที่ 2 (กรอบสีน้ำเงิน) -->
     <div class="flex items-center space-x-6 text-sm">
         <a href="https://www.example.com" target="_blank" class="hover:text-blue-600 transition">ปุ่มใหม่ 1</a>
         <a href="https://www.example.com" target="_blank" class="hover:text-blue-600 transition">ปุ่มใหม่ 2</a>
     </div>
+</nav>
 
-
-        <!-- ย้ายปุ่ม Logout มาไว้ตรงนี้ (คู่กับ nav ภายใต้ div ของ header) -->
-        <button id="logoutBtn" class="ml-8 px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition shadow-lg border">
-            Logout
-        </button>
-    </div>
+<!-- ปุ่ม Logout -->
+<button id="logoutBtn" class="ml-8 px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition shadow-lg border">
+    Logout
+</button>
 </header>
       <div class="flex items-center justify-between mb-4">
   <h2 class="font-bold text-gray-700 text-lg">🚚 Station List</h2>
