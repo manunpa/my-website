@@ -63,7 +63,10 @@
   </header>
   <div class="flex-1 overflow-hidden flex">
     <aside id="leftPanel" class="w-72 bg-gray-50 text-gray-800 p-4 overflow-y-auto border-r border-gray-200 flex flex-col">
-      <h2 class="mb-4 font-bold text-gray-700 text-lg">🚗 Station List</h2>
+      <div class="flex items-center justify-between mb-4">
+  <h2 class="font-bold text-gray-700 text-lg">🚚 Station List</h2>
+  <button id="togglePanelBtn" class="text-xs bg-gray-200 hover:bg-gray-300 px-2.5 py-1 rounded">ซ่อน</button>
+</div>
       <input type="text" id="searchInput" placeholder="ค้นหาสถานี..." class="mb-4 p-2 rounded bg-white border border-gray-300 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"/>
       <ul id="vehicleList" class="space-y-3 overflow-y-auto flex-1"></ul>
     </aside>
@@ -204,6 +207,15 @@
   }
 
   loadCSV();
+  document.getElementById('togglePanelBtn').addEventListener('click', () => {
+  const leftPanel = document.getElementById('leftPanel');
+  const btn = document.getElementById('togglePanelBtn');
+  
+  leftPanel.classList.toggle('hidden');
+  btn.textContent = leftPanel.classList.contains('hidden') ? 'แสดงแถบ' : 'ซ่อน';
+  
+  setTimeout(() => { map.invalidateSize(); }, 200);
+});
 </script>
 </body>
 </html>
