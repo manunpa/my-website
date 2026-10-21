@@ -191,7 +191,14 @@
     // ตรวจสอบและแปลงค่าพิกัด ละติจูด, ลองจิจูด (เช่น 13.7563, 100.5018)
     const coords = query.split(',').map(item => parseFloat(item.trim()));
     if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
-        map.setView([coords[0], coords[1]], 15); // ย้ายแผนที่ไปที่พิกัดนั้น
+        // ย้ายแผนที่ไปยังพิกัดนั้น
+        map.setView([coords[0], coords[1]], 15);
+        
+        // ปักหมุดตรงพิกัดที่ค้นหาทันที
+        L.marker([coords[0], coords[1]])
+            .addTo(map)
+            .bindPopup(`<b>พิกัดที่ค้นหา</b><br>Lat: ${coords[0]}<br>Lng: ${coords[1]}`)
+            .openPopup();
     }
     
     displayVehicles(query);
