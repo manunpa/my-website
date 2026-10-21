@@ -61,47 +61,53 @@
 <div id="app" class="flex flex-col h-full">
   <header class="flex items-center justify-between bg-white text-gray-800 px-6 py-6 shadow-md border-b border-gray-200">
     <div class="text-xl font-semibold tracking-wide">🛡️ Customer Stations Map</div>
-    <nav class="flex flex-col items-end gap-y-2 text-gray-600">
-    <!-- แถวที่ 1 -->
     <div class="flex items-center space-x-6">
-        <button class="hover:text-blue-600 transition">Home</button>
-        <a href="alert-rate.html" class="hover:text-blue-600 transition">อัตราการแจ้งเตือน</a>
-        <a href="http://103.228.55.220/SDFMSV20/login/logout" target="_blank" class="hover:text-blue-600 transition">FMS</a>
-        <a href="https://hosting.wialon.eu/?lang=en" target="_blank" class="hover:text-blue-600 transition">Wialon</a>
-        <a href="https://gps.dtc.co.th/v2/login" target="_blank" class="hover:text-blue-600 transition">DTC</a>
-        <a href="https://tttwli.com/login.html" target="_blank" class="hover:text-blue-600 transition">Smart Logistics</a>
-    </div>
+        <nav class="flex flex-col items-end gap-y-2 text-gray-600">
+            <!-- แถวที่ 1 -->
+            <div class="flex items-center space-x-6">
+                <button class="hover:text-blue-600 transition">Home</button>
+                <a href="alert-rate.html" class="hover:text-blue-600 transition">อัตราการแจ้งเตือน</a>
+                <a href="http://103.228.55.220/SDFMSV20/login/logout" target="_blank" class="hover:text-blue-600 transition">FMS</a>
+                <a href="https://hosting.wialon.eu/?lang=en" target="_blank" class="hover:text-blue-600 transition">Wialon</a>
+                <a href="https://gps.dtc.co.th/v2/login" target="_blank" class="hover:text-blue-600 transition">DTC</a>
+                <a href="https://tttwli.com/login.html" target="_blank" class="hover:text-blue-600 transition">Smart Logistics</a>
+            </div>
 
-    <!-- แถวที่ 2 (กรอบสีน้ำเงิน) -->
-    <div class="flex items-center space-x-6 text-sm">
-        <a href="https://www.example.com" target="_blank" class="hover:text-blue-600 transition">ปุ่มใหม่ 1</a>
-        <a href="https://www.example.com" target="_blank" class="hover:text-blue-600 transition">ปุ่มใหม่ 2</a>
-    </div>
-</nav>
+            <!-- แถวที่ 2 (กรอบสีน้ำเงิน) -->
+            <div class="flex items-center space-x-6 text-sm">
+                <a href="https://www.example.com" target="_blank" class="hover:text-blue-600 transition">ปุ่มใหม่ 1</a>
+                <a href="https://www.example.com" target="_blank" class="hover:text-blue-600 transition">ปุ่มใหม่ 2</a>
+            </div>
+        </nav>
 
-<!-- ปุ่ม Logout -->
-<button id="logoutBtn" class="ml-8 px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition shadow-lg border">
-    Logout
-</button>
+        <!-- ปุ่ม Logout -->
+        <button id="logoutBtn" class="ml-8 px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition shadow-lg border">
+            Logout
+        </button>
+    </div>
 </header>
-      <div class="flex items-center justify-between mb-4">
-  <h2 class="font-bold text-gray-700 text-lg">🚚 Station List</h2>
-  <button id="togglePanelBtn" class="text-xs bg-gray-200 hover:bg-gray-300 px-2.5 py-1 rounded">ซ่อน</button>
-</div>
-      <input type="text" id="searchInput" placeholder="ค้นหาสถานี..." class="mb-4 p-2 rounded bg-white border border-gray-300 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"/>
-      <ul id="vehicleList" class="space-y-3 overflow-y-auto flex-1"></ul>
+
+<!-- โครงสร้างหน้าเว็บหลัก (Sidebar ด้านซ้าย และ Map ด้านขวา) -->
+<div class="flex-1 overflow-hidden flex">
+    <aside id="leftPanel" class="w-72 bg-gray-50 text-gray-800 p-4 overflow-y-auto border-r border-gray-200 flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="font-bold text-gray-700 text-lg">🚚 Station List</h2>
+            <button id="togglePanelBtn" class="text-xs bg-gray-200 hover:bg-gray-300 px-2.5 py-1 rounded">ซ่อน</button>
+        </div>
+        <input type="text" id="searchInput" placeholder="ค้นหาสถานี..." class="mb-4 p-2 rounded bg-white border border-gray-300 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"/>
+        <ul id="vehicleList" class="space-y-3 overflow-y-auto flex-1"></ul>
     </aside>
+    
     <main class="flex-1 relative flex flex-col">
-      <div class="p-2 bg-white text-gray-700 flex items-center space-x-3 border-b border-gray-200 shadow-sm">
-        <label for="layerSelect" class="font-semibold select-none">แผนที่:</label>
-        <select id="layerSelect" class="bg-gray-50 border border-gray-300 text-gray-800 rounded px-2 py-1 focus:outline-none">
-          <option value="osm">OpenStreetMap</option>
-          <option value="satellite">ดาวเทียม</option>
-        </select>
-      </div>
-      <div id="map" class="flex-1"></div>
+        <div class="p-2 bg-white text-gray-700 flex items-center space-x-3 border-b border-gray-200 shadow-sm">
+            <label for="layerSelect" class="font-semibold select-none">แผนที่:</label>
+            <select id="layerSelect" class="bg-gray-50 border border-gray-300 text-gray-800 rounded px-2 py-1 focus:outline-none">
+                <option value="osm">OpenStreetMap</option>
+                <option value="satellite">ดาวเทียม</option>
+            </select>
+        </div>
+        <div id="map" class="flex-1"></div>
     </main>
-  </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
