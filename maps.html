@@ -77,13 +77,14 @@
         <a href="https://www.example.com" target="_blank" class="hover:text-blue-600 transition">ปุ่มใหม่ 1</a>
         <a href="https://www.example.com" target="_blank" class="hover:text-blue-600 transition">ปุ่มใหม่ 2</a>
     </div>
-</nav>
-        Logout
-      </button>
-    </nav>
-  </header>
-  <div class="flex-1 overflow-hidden flex">
-    <aside id="leftPanel" class="w-72 bg-gray-50 text-gray-800 p-4 overflow-y-auto border-r border-gray-200 flex flex-col">
+
+
+        <!-- ย้ายปุ่ม Logout มาไว้ตรงนี้ (คู่กับ nav ภายใต้ div ของ header) -->
+        <button id="logoutBtn" class="ml-8 px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition shadow-lg border">
+            Logout
+        </button>
+    </div>
+</header>
       <div class="flex items-center justify-between mb-4">
   <h2 class="font-bold text-gray-700 text-lg">🚚 Station List</h2>
   <button id="togglePanelBtn" class="text-xs bg-gray-200 hover:bg-gray-300 px-2.5 py-1 rounded">ซ่อน</button>
