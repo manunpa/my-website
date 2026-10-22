@@ -284,7 +284,7 @@
   onAuthStateChanged(auth, (user) => {
     if (!user) {
       // ถ้าไม่มีการล็อกอิน ให้ดีดกลับหน้า index.html ทันที
-      window.location.replace("index.html");
+      window.location.replace("/my-website/index.html");
     }
   });
 
@@ -293,7 +293,7 @@
   setTimeout(() => {
     alert("หมดเวลาการใช้งาน ระบบจะนำท่านกลับสู่หน้าเข้าสู่ระบบ");
     signOut(auth).then(() => {
-      window.location.replace("index.html");
+      window.location.replace("/my-website/index.html");
     });
   }, SESSION_TIMEOUT);
 </script>
