@@ -267,7 +267,6 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js";
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js";
 
-  // ตั้งค่า Firebase Config ของคุณ
   const firebaseConfig = {
     apiKey: "AIzaSyD7HPOhIoICyXEyDTFR8yRiH2rT--q4FVo",
     authDomain: "my-login-project-26857.firebaseapp.com",
@@ -280,16 +279,22 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  // 1. ใช้ onAuthStateChanged ตรวจสอบสถานะล็อกอิน ป้องกันปัญหาลูป
+  // ป้องกันหน้ากะพริบ: ซ่อนเนื้อหาเว็บไว้ก่อนจนกว่าจะเช็ก Auth เสร็จ
+  document.body.style.visibility = "hidden";
+
+  // ใช้ onAuthStateChanged ตรวจสอบสถานะอย่างแม่นยำ
   onAuthStateChanged(auth, (user) => {
-    if (!user) {
-      // ถ้าไม่มีการล็อกอิน ให้ดีดกลับหน้า index.html ทันที
+    if (user) {
+      // ถ้ามี User ล็อกอินอยู่ ปล่อยให้แสดงหน้าเว็บปกติ
+      document.body.style.visibility = "visible";
+    } else {
+      // ถ้าไม่มี User จริงๆ ถึงค่อยดีดกลับหน้า Login
       window.location.replace("/my-website/index.html");
     }
   });
 
-  // 2. ระบบนับถอยหลัง 10 นาทีแบบตายตัว (ไม่สนใจการขยับเมาส์)
-  const SESSION_TIMEOUT = 10 * 60 * 1000; // 10 นาที (มิลลิวินาที)
+  // ระบบนับถอยหลัง 10 นาทีแบบตายตัว
+  const SESSION_TIMEOUT = 10 * 60 * 1000; // 10 นาที
   setTimeout(() => {
     alert("หมดเวลาการใช้งาน ระบบจะนำท่านกลับสู่หน้าเข้าสู่ระบบ");
     signOut(auth).then(() => {
