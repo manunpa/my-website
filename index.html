@@ -55,11 +55,10 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js";
 
-  // ✅ ใส่ config Firebase ของคุณตรงนี้
   const firebaseConfig = {
-    apiKey: "AIzaSyD7HPOhloICyxEyDTfR8yRiH2rT--q4fVo",
+    apiKey: "AIzaSyD7HPOhloICyxEyDTfR8yRiH2rT--q4FVo",
     authDomain: "my-login-project-26857.firebaseapp.com",
     projectId: "my-login-project-26857",
     storageBucket: "my-login-project-26857.appspot.com",
@@ -70,12 +69,13 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  // เช็คสถานะล็อกอินตอนโหลดหน้า ถ้าล็อกอินอยู่แล้วให้ไป maps ทันที
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      // ใช้ replace() แทน href เพื่อไม่เก็บหน้า login ใน history
-      window.location.replace("/my-website/Access-Hub.html");
-    }
+  // 🔒 บังคับตั้งค่า Persistence ให้จำสถานะการล็อกอินข้ามหน้าเว็บ
+  setPersistence(auth, browserLocalPersistence).then(() => {
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.replace("/my-website/Access-Hub.html");
+      }
+    });
   });
 
   const loginForm = document.getElementById("loginForm");
@@ -85,10 +85,10 @@
     const password = document.getElementById("password").value;
 
     try {
+      await setPersistence(auth, browserLocalPersistence);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       alert(`✅ Welcome back, ${userCredential.user.email}!`);
-      // เปลี่ยนจาก href เป็น replace เพื่อไม่เก็บหน้า login ใน history
-      window.location.replace("Access-Hub.html");
+      window.location.replace("/my-website/Access-Hub.html");
     } catch (error) {
       alert(`❌ Login failed: ${error.message}`);
     }
