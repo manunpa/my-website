@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HUB</title>
+<title>Access Hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -45,7 +45,6 @@
     transition: background .3s, color .3s;
   }
 
-  /* พื้นหลังจุดเล็กๆ จางหายไปทางขอบล่าง */
   body::before {
     content: "";
     position: fixed; inset: 0;
@@ -64,7 +63,6 @@
     padding: 64px 24px 56px;
   }
 
-  /* ---------- Top bar ---------- */
   .top {
     display: flex; align-items: center; justify-content: space-between;
     gap: 16px; margin-bottom: 56px;
@@ -84,7 +82,6 @@
   :root[data-theme="dark"] .theme .sun { display: none; }
   :root[data-theme="dark"] .theme .moon { display: block; }
 
-  /* ---------- Hero ---------- */
   header { margin-bottom: 36px; }
   h1 {
     font-size: clamp(2.4rem, 7vw, 3.75rem);
@@ -104,7 +101,6 @@
   @keyframes blink { 50% { opacity: 0; } }
   header p { margin-top: 12px; color: var(--muted); font-weight: 300; }
 
-  /* ---------- Search ---------- */
   .search {
     position: relative; margin-bottom: 44px; max-width: 460px;
   }
@@ -131,7 +127,6 @@
   }
   .empty { display: none; color: var(--muted); font-weight: 300; padding: 8px 0 24px; }
 
-  /* ---------- Sections & cards ---------- */
   section { margin-bottom: 40px; }
   h2 {
     font-size: .95rem; font-weight: 500; color: var(--muted);
@@ -158,7 +153,6 @@
     color: inherit; text-decoration: none;
     transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s, border-color .2s;
   }
-  /* แสงตามเมาส์ */
   .btn::before {
     content: ""; position: absolute; inset: 0;
     background: radial-gradient(180px circle at var(--mx) var(--my), var(--spot), transparent 70%);
@@ -188,7 +182,6 @@
   }
   .label span { display: block; font-size: .82rem; color: var(--muted); font-weight: 300; }
 
-  /* ลูกศรเลื่อนเข้ามาตอน hover */
   .go {
     position: relative; flex: none; width: 18px; height: 18px; color: var(--muted);
     opacity: 0; transform: translate(-6px, 6px);
@@ -196,7 +189,6 @@
   }
   .btn:hover .go { opacity: 1; transform: none; color: var(--text); }
 
-  /* ปุ่มเน้น */
   .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
   .btn.primary .label span, .btn.primary .go { color: var(--accent-text); opacity: .6; }
   .btn.primary:hover .go { opacity: 1; color: var(--accent-text); }
@@ -207,7 +199,6 @@
 
   footer { margin-top: 56px; font-size: .82rem; color: var(--muted); font-weight: 300; }
 
-  /* ---------- โหลดหน้าครั้งเดียว: ทุกอย่างค่อยๆ ขึ้นตามลำดับ ---------- */
   .reveal { opacity: 0; transform: translateY(14px); animation: up .6s cubic-bezier(.2,.8,.2,1) forwards; animation-delay: calc(var(--i, 0) * 55ms); }
   @keyframes up { to { opacity: 1; transform: none; } }
 
@@ -235,8 +226,8 @@
   </div>
 
   <header class="reveal" style="--i:1">
-    <h1 id="title" class="typed" aria-label="HUB"></h1>
-    <p id="greet">รวมลิงก์ที่ใช้บ่อยไว้ในที่เดียว</p>
+    <h1 id="title" class="typed" aria-label="Access Hub"></h1>
+    <p id="greet">ศูนย์รวมช่องทางการเข้าถึงระบบงาน</p>
   </header>
 
   <div class="search reveal" style="--i:2">
@@ -245,13 +236,6 @@
     <kbd>/</kbd>
   </div>
   <p class="empty" id="empty">ไม่พบลิงก์ที่ตรงกับคำค้น</p>
-
-  <!--
-    วิธีใช้
-    1) เปลี่ยน href="#" เป็นลิงก์ของคุณ
-    2) แก้ชื่อใน <strong> และคำอธิบายใน <span> (ช่องค้นหาจะค้นจากสองส่วนนี้)
-    3) ปุ่มเน้นสีดำ: ใส่ class="btn primary"
-  -->
 
   <section class="reveal" style="--i:3">
     <h2>กลุ่มที่ 1</h2>
@@ -274,56 +258,46 @@
     </div>
   </section>
 
-  <section class="reveal" style="--i:4">
-    <h2>กลุ่มที่ 2</h2>
-    <div class="grid">
-      <a class="btn" href="#" target="_blank" rel="noopener">
-        <div class="icon">▲</div>
-        <div class="label"><strong>ปุ่มที่ 4</strong><span>คำอธิบายสั้นๆ</span></div>
-        <svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
-      </a>
-      <a class="btn" href="#" target="_blank" rel="noopener">
-        <div class="icon">■</div>
-        <div class="label"><strong>ปุ่มที่ 5</strong><span>คำอธิบายสั้นๆ</span></div>
-        <svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
-      </a>
-      <a class="btn" href="#" target="_blank" rel="noopener">
-        <div class="icon">○</div>
-        <div class="label"><strong>ปุ่มที่ 6</strong><span>คำอธิบายสั้นๆ</span></div>
-        <svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
-      </a>
-      <a class="btn" href="#" target="_blank" rel="noopener">
-        <div class="icon">✦</div>
-        <div class="label"><strong>ปุ่มที่ 7</strong><span>คำอธิบายสั้นๆ</span></div>
-        <svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
-      </a>
-    </div>
-  </section>
-
-  <section class="reveal" style="--i:5">
-    <h2>กลุ่มที่ 3</h2>
-    <div class="grid">
-      <a class="btn" href="#" target="_blank" rel="noopener">
-        <div class="icon">◐</div>
-        <div class="label"><strong>ปุ่มที่ 8</strong><span>คำอธิบายสั้นๆ</span></div>
-        <svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
-      </a>
-      <a class="btn" href="#" target="_blank" rel="noopener">
-        <div class="icon">◇</div>
-        <div class="label"><strong>ปุ่มที่ 9</strong><span>คำอธิบายสั้นๆ</span></div>
-        <svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
-      </a>
-    </div>
-  </section>
-
-  <footer class="reveal" style="--i:6">กด / เพื่อค้นหา · Esc เพื่อล้างคำค้น</footer>
+  <footer class="reveal" style="--i:4">กด / เพื่อค้นหา · Esc เพื่อล้างคำค้น</footer>
 </div>
+
+<!-- Firebase App & Auth SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js";
+
+  // ตั้งค่า Firebase Config ของคุณให้ตรงกับหน้า index.html
+  const firebaseConfig = {
+    apiKey: "AIzaSyD7HPOhIoICyXEyDTFR8yRiH2rT--q4FVo",
+    authDomain: "my-login-project-26857.firebaseapp.com",
+    projectId: "my-login-project-26857",
+    storageBucket: "my-login-project-26857.appspot.com",
+    messagingSenderId: "199741800244",
+    appId: "1:199741800244:web:41b413f67038c687dc2f61"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  // 1. ป้องกันคนมีลิงก์ตรง: ตรวจสอบสถานะล็อกอิน ถ้ายังไม่ล็อกอิน ให้ดีดกลับไป index.html ทันที
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      window.location.replace("index.html");
+    }
+  });
+
+  // 2. ระบบนับถอยหลัง 10 นาทีแบบตายตัว (ไม่สนใจการขยับเมาส์)
+  const SESSION_TIMEOUT = 10 * 60 * 1000; // 10 นาที (มิลลิวินาที)
+  setTimeout(() => {
+    alert("หมดเวลาการใช้งาน ระบบจะนำท่านกลับสู่หน้าเข้าสู่ระบบ");
+    window.location.replace("index.html");
+  }, SESSION_TIMEOUT);
+</script>
 
 <script>
 (function () {
   var root = document.documentElement;
 
-  /* ---------- ธีมสว่าง/มืด (จำค่าไว้ ถ้า storage ใช้ไม่ได้ก็ข้ามไป) ---------- */
   try { if (localStorage.getItem("hub-theme") === "dark") root.setAttribute("data-theme", "dark"); } catch (e) {}
   document.getElementById("theme").addEventListener("click", function () {
     var dark = root.getAttribute("data-theme") !== "dark";
@@ -331,7 +305,6 @@
     try { localStorage.setItem("hub-theme", dark ? "dark" : "light"); } catch (e) {}
   });
 
-  /* ---------- นาฬิกา + คำทักทายตามช่วงเวลา ---------- */
   var clock = document.getElementById("clock");
   var greet = document.getElementById("greet");
   var days = ["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัสบดี","ศุกร์","เสาร์"];
@@ -346,9 +319,8 @@
   }
   tick(); setInterval(tick, 20000);
 
-  /* ---------- หัวข้อพิมพ์ทีละตัว (เล่นครั้งเดียวตอนเปิดหน้า) ---------- */
   var title = document.getElementById("title");
-  var text = "HUB", i = 0;
+  var text = "Access Hub", i = 0;
   var still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (still) { title.textContent = text; title.classList.remove("typed"); }
   else {
@@ -359,7 +331,6 @@
     }, 450);
   }
 
-  /* ---------- แสงตามเมาส์บนการ์ด ---------- */
   var cards = Array.prototype.slice.call(document.querySelectorAll(".btn"));
   cards.forEach(function (c) {
     c.addEventListener("pointermove", function (e) {
@@ -369,7 +340,6 @@
     });
   });
 
-  /* ---------- ค้นหา / กรองปุ่ม ---------- */
   var q = document.getElementById("q");
   var empty = document.getElementById("empty");
   var sections = Array.prototype.slice.call(document.querySelectorAll("section"));
