@@ -279,9 +279,9 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  // 1. ป้องกันคนมีลิงก์ตรง: ตรวจสอบสถานะล็อกอิน ถ้ายังไม่ล็อกอิน ให้ดีดกลับไป index.html ทันที
-  onAuthStateChanged(auth, (user) => {
-    if (!user) {
+  // 1. ป้องกันคนมีลิงก์ตรง: รอให้ Firebase ตรวจสอบสถานะเซสชันให้เสร็จก่อนค่อยเช็ก
+  auth.authStateReady().then(() => {
+    if (!auth.currentUser) {
       window.location.replace("index.html");
     }
   });
