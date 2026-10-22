@@ -1,87 +1,69 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Access Hub</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 flex items-center justify-center h-screen">
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-    <div class="bg-white p-8 rounded-lg shadow-lg w-96">
-        <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">เข้าสู่ระบบ Access Hub</h2>
-        
-        <form id="login-form" class="space-y-4">
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">อีเมล</label>
-                <input type="email" id="email" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">รหัสผ่าน</label>
-                <input type="password" id="password" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7HPOhloICyxEyDTfR8yRiH2rT--q4fVo",
+      authDomain: "my-login-project-26857.firebaseapp.com",
+      projectId: "my-login-project-26857",
+      storageBucket: "my-login-project-26857.firebasestorage.app",
+      messagingSenderId: "199741800244",
+      appId: "1:199741800244:web:41b413f67038c687dc2f61"
+    };
 
-            <div id="error-message" class="text-red-500 text-sm hidden"></div>
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
 
-            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200">
-                เข้าสู่ระบบ
-            </button>
-        </form>
-    </div>
+    const loginForm = document.getElementById("login-form");
+    const errorMessage = document.getElementById("error-message");
 
-    <!-- Firebase SDK Scripts -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    function showError(msg) {
+        errorMessage.textContent = msg;
+        errorMessage.classList.remove("hidden");
+    }
 
-        // ตั้งค่า Firebase Config ของคุณ
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "my-login-project-26857.firebasestorage.app",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-
-        // ตั้งค่า Persistence เป็น Local
-        setPersistence(auth, browserLocalPersistence).catch((error) => {
-            console.error("Persistence Error:", error);
-        });
-
-        // ถ้าเคยล็อกอินอยู่แล้วและมีค่าใน localStorage ให้ดีدข้ามไปหน้า Hub ทันที
-        if (localStorage.getItem("isLoggedIn") === "true") {
-            window.location.replace("/my-website/Access-Hub.html");
+    // ถ้า Firebase ยืนยันว่ามี user อยู่แล้ว ค่อยไปหน้า Hub
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            window.location.replace("./Access-Hub.html");
         }
+    });
 
-        // จัดการฟอร์ม Login
-        const loginForm = document.getElementById("login-form");
-        const errorMessage = document.getElementById("error-message");
+    loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorMessage.classList.add("hidden");
 
-        loginForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const email = document.getElementById("email").value;
-            const password = document.getElementById("password").value;
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
 
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                // บันทึกสถานะลง localStorage ทันทีเพื่อกันลูป
-                localStorage.setItem("isLoggedIn", "true");
-                // ย้ายไปหน้า Access-Hub
-                window.location.replace("/my-website/Access-Hub.html");
-            } catch (error) {
-                errorMessage.textContent = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
-                errorMessage.classList.remove("hidden");
+        try {
+            // รอให้ตั้งค่า persistence เสร็จก่อนล็อกอิน
+            await setPersistence(auth, browserLocalPersistence);
+            await signInWithEmailAndPassword(auth, email, password);
+            // ไม่ต้องสั่งเปลี่ยนหน้าเอง onAuthStateChanged จะจัดการให้
+        } catch (error) {
+            console.error("Login error:", error.code, error.message);
+            switch (error.code) {
+                case "auth/invalid-credential":
+                case "auth/wrong-password":
+                case "auth/user-not-found":
+                    showError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+                    break;
+                case "auth/too-many-requests":
+                    showError("พยายามล็อกอินหลายครั้งเกินไป กรุณารอสักครู่");
+                    break;
+                case "auth/network-request-failed":
+                    showError("เชื่อมต่อเครือข่ายไม่ได้");
+                    break;
+                case "auth/unauthorized-domain":
+                    showError("โดเมนนี้ยังไม่ได้รับอนุญาตใน Firebase");
+                    break;
+                default:
+                    showError("เกิดข้อผิดพลาด: " + error.code);
             }
-        });
-    </script>
-</body>
-</html>
+        }
+    });
+</script>
 
 
 
