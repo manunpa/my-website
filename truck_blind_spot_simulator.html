@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>โปรแกรมจำลองมุมอับสายตารถบรรทุก - Truck Blind Spot Simulator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            font-family: 'Prompt', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 3px;
+        }
+
+        /* Pulsing border for alerts */
+        @keyframes pulse-red {
+            0%, 100% { border-color: rgba(239, 68, 68, 1); box-shadow: 0 0 15px rgba(239, 68, 68, 0.6); }
+            50% { border-color: rgba(239, 68, 68, 0.3); box-shadow: 0 0 5px rgba(239, 68, 68, 0.2); }
+        }
+        .alert-active {
+            animation: pulse-red 1s infinite;
+        }
+
+        /* Mirror perspective reflection effect */
+        .mirror-glass {
+            background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.5) 100%);
+            backdrop-filter: blur(2px);
+        }
+
+        /* On-screen touch D-Pad styling */
+        .control-btn {
+            background: rgba(31, 41, 55, 0.8);
+            border: 1px solid rgba(75, 85, 99, 0.6);
+            backdrop-filter: blur(4px);
+            active: scale(0.95);
+        }
+        .control-btn:active {
+            background: rgba(59, 130, 246, 0.6);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden select-none">
+
+    <!-- Top Header Navigation -->
+    <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex justify-between items-center z-20 shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="bg-amber-500 text-slate-950 p-2 rounded-lg font-bold text-xl flex items-center justify-center shadow-lg shadow-amber-500/20">
+                <i class="fa-solid font-black fa-truck"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight text-amber-400">Truck Blind Spot Simulator</h1>
+                <p class="text-xs text-slate-400">โปรแกรมจำลองและเรียนรู้มุมอับสายตารถบรรทุก 18 ล้อ</p>
+            </div>
+        </div>
+
+        <!-- Desktop Quick Stats & Controls Header -->
+        <div class="flex items-center space-x-4">
+            <button id="toggleGuideBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center transition">
+                <i class="fa-solid fa-eye text-amber-400 mr-2"></i>
+                <span id="guideBtnText">ซ่อนพื้นที่มุมอับ ( [V] )</span>
+            </button>
+            <button id="toggleInfoBtn" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center transition">
+                <i class="fa-solid fa-book-open mr-2"></i> คู่มือมุมอับสายตา
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <div class="flex-1 flex flex-col lg:flex-row relative overflow-hidden">
+        
+        <!-- Sidebar - Lesson Controls & Info -->
+        <aside class="w-full lg:w-80 bg-slate-900/80 border-b lg:border-b-0 lg:border-r border-slate-800 p-4 flex flex-col gap-4 z-10 shrink-0 overflow-y-auto max-h-[30vh] lg:max-h-none">
+            
+            <!-- Mode / Lesson Selector -->
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                    <i class="fa-solid fa-graduation-cap text-amber-400 mr-1"></i> เลือกบทเรียน (Lessons)
+                </label>
+                <select id="lessonSelect" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg p-2.5 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    <option value="1">บทที่ 1: สำรวจจุดอับสายตา (Free Explore)</option>
+                    <option value="2">บทที่ 2: ขับรถหลบเลี่ยงอันตราย (Blind Spot Avoidance)</option>
+                    <option value="3">บทที่ 3: การเลี้ยวขวาและการเปลี่ยนเลน (Safe Turning)</option>
+                </select>
+            </div>
+
+            <!-- Objective Card -->
+            <div class="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 flex-1">
+                <h3 class="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                    <span>ภารกิจ (Objective)</span>
+                    <span id="scoreText" class="text-emerald-400 font-bold text-sm">คะแนน: 0</span>
+                </h3>
+                <p id="lessonObjective" class="text-xs text-slate-300 leading-relaxed mb-3">
+                    ขับรถสำรวจจุดอับสายตารอบตัวรถบรรทุก สังเกตว่าสิ่งกีดขวางหรือผู้ใช้ถนนคนอื่นจะหายไปจากกระจกมองข้างเมื่อเข้าสู่เขตสีแดง
+                </p>
+                
+                <!-- Status Indicators -->
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="bg-slate-900 p-2 rounded-lg border border-slate-800 text-center">
+                        <span class="block text-slate-500 text-[10px]">การชน (Collisions)</span>
+                        <span id="collisionCount" class="font-bold text-red-400 text-base">0</span>
+                    </div>
+                    <div class="bg-slate-900 p-2 rounded-lg border border-slate-800 text-center">
+                        <span class="block text-slate-500 text-[10px]">เช็คกระจก (Mirror Check)</span>
+                        <span id="mirrorCheckStatus" class="font-bold text-amber-400 text-base">พร้อม</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Warning Banner -->
+            <div id="warningBox" class="hidden bg-red-950/80 border border-red-500/50 p-3 rounded-xl text-xs text-red-200 alert-active flex items-center space-x-3">
+                <i class="fa-solid fa-triangle-exclamation text-red-500 text-xl shrink-0"></i>
+                <div>
+                    <span class="font-bold block text-red-400">คำเตือน! สภาพอันตราย</span>
+                    <span id="warningMsg">มีคนเดินเท้าอยู่ในจุดอับสายตาฝั่งซ้าย!</span>
+                </div>
+            </div>
+
+            <!-- Steering Tips -->
+            <div class="hidden lg:block bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs text-slate-400">
+                <div class="font-semibold text-slate-300 mb-1"><i class="fa-solid fa-keyboard mr-1 text-amber-400"></i> การควบคุม:</div>
+                <ul class="space-y-1 text-[11px] list-disc list-inside">
+                    <li><strong class="text-slate-200">W / ↑</strong>: เร่งความเร็ว</li>
+                    <li><strong class="text-slate-200">S / ↓</strong>: ถอยหลัง / เบรก</li>
+                    <li><strong class="text-slate-200">A / D / ← / →</strong>: เลี้ยวซ้าย-ขวา</li>
+                    <li><strong class="text-slate-200">Spacebar</strong>: ส่องกระจกมองข้าง</li>
+                    <li><strong class="text-slate-200">V</strong>: เปิด/ปิด การแสดงโซนจุดอับ</li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Center Canvas Interactive Area -->
+        <main class="flex-1 relative bg-slate-900 flex flex-col items-center justify-center overflow-hidden min-h-[450px]">
+            <!-- Canvas Container -->
+            <div id="canvasContainer" class="relative w-full h-full flex items-center justify-center">
+                <canvas id="gameCanvas" class="w-full h-full bg-slate-950 cursor-crosshair"></canvas>
+
+                <!-- On-Canvas HUD Overlay: Mirrors -->
+                <div class="absolute top-3 left-3 right-3 pointer-events-none flex justify-between items-start">
+                    
+                    <!-- Left Side Mirror Panel -->
+                    <div class="bg-slate-950/90 border-2 border-slate-700 rounded-xl p-1.5 shadow-2xl mirror-glass w-32 sm:w-44 pointer-events-auto transition hover:border-amber-400">
+                        <div class="text-[10px] text-amber-400 font-bold mb-1 flex justify-between items-center px-1">
+                            <span><i class="fa-solid fa-arrow-left"></i> กระจกซ้าย (Left)</span>
+                            <span class="text-[9px] text-slate-400">จุดอับใหญ่ที่สุด</span>
+                        </div>
+                        <canvas id="leftMirrorCanvas" class="w-full h-20 sm:h-24 bg-slate-900 rounded border border-slate-800"></canvas>
+                    </div>
+
+                    <!-- Center Rearview / Warning Indicator -->
+                    <div id="centerHudDisplay" class="bg-slate-950/90 border border-slate-800 rounded-xl px-3 py-1.5 backdrop-blur text-center pointer-events-auto">
+                        <span class="text-[10px] text-slate-400 block">มุมมองผู้ขับขี่</span>
+                        <span id="driverStatusText" class="text-xs font-bold text-emerald-400">ปลอดภัย</span>
+                    </div>
+
+                    <!-- Right Side Mirror Panel -->
+                    <div class="bg-slate-950/90 border-2 border-slate-700 rounded-xl p-1.5 shadow-2xl mirror-glass w-32 sm:w-44 pointer-events-auto transition hover:border-amber-400">
+                        <div class="text-[10px] text-amber-400 font-bold mb-1 flex justify-between items-center px-1">
+                            <span>กระจกขวา (Right) <i class="fa-solid fa-arrow-right"></i></span>
+                            <span class="text-[9px] text-slate-400">คนขับ</span>
+                        </div>
+                        <canvas id="rightMirrorCanvas" class="w-full h-20 sm:h-24 bg-slate-900 rounded border border-slate-800"></canvas>
+                    </div>
+                </div>
+
+                <!-- Mirror Glance Prompt Overlay -->
+                <div id="glancePrompt" class="absolute bottom-16 bg-amber-500 text-slate-950 font-bold px-4 py-2 rounded-full shadow-lg text-xs animate-bounce hidden pointer-events-none">
+                    กด [Spacebar] เพื่อตรวจสอบกระจกมองข้าง!
+                </div>
+
+                <!-- Mobile Touch Controls Overlay -->
+                <div class="lg:hidden absolute bottom-3 left-3 right-3 flex justify-between items-end pointer-events-none z-30">
+                    <!-- D-Pad Left/Right -->
+                    <div class="flex gap-2 pointer-events-auto">
+                        <button id="btnLeft" class="control-btn w-14 h-14 rounded-full text-slate-200 text-xl flex items-center justify-center active:bg-amber-500/50">
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                        <button id="btnRight" class="control-btn w-14 h-14 rounded-full text-slate-200 text-xl flex items-center justify-center active:bg-amber-500/50">
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <!-- Action Check Mirror -->
+                    <div class="pointer-events-auto">
+                        <button id="btnMirror" class="control-btn px-4 py-3 rounded-xl bg-amber-500/20 border-amber-500/50 text-amber-400 font-bold text-xs flex items-center gap-1 active:bg-amber-500/40">
+                            <i class="fa-solid fa-eye"></i> เช็คกระจก
+                        </button>
+                    </div>
+
+                    <!-- Gas / Brake -->
+                    <div class="flex flex-col gap-2 pointer-events-auto">
+                        <button id="btnGas" class="control-btn w-14 h-14 rounded-full text-emerald-400 text-xl flex items-center justify-center active:bg-emerald-500/50">
+                            <i class="fa-solid fa-gas-pump"></i>
+                        </button>
+                        <button id="btnBrake" class="control-btn w-14 h-14 rounded-full text-red-400 text-xl flex items-center justify-center active:bg-red-500/50">
+                            <i class="fa-solid fa-circle-stop"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Educational Modal / Drawer for Truck Blind Spots Guide -->
+    <div id="infoModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 max-w-2xl w-full rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <!-- Modal Header -->
+            <div class="bg-slate-800 px-5 py-4 border-b border-slate-700 flex justify-between items-center">
+                <h2 class="font-bold text-amber-400 text-lg flex items-center">
+                    <i class="fa-solid fa-shield-halved mr-2"></i> 4 จุดอับสายตามฤตยูของรถบรรทุก (No-Zones)
+                </h2>
+                <button id="closeModalBtn" class="text-slate-400 hover:text-white text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content Body -->
+            <div class="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm text-slate-300">
+                <p class="leading-relaxed">
+                    รถบรรทุกขนาดใหญ่มีจุดอับสายตา (Blind Spots หรือ No-Zones) ที่กว้างขวางกว่ารถยนต์ทั่วไปมาก หากผู้ขับขี่รถเล็กหรือรถจักรยานยนต์อยู่ในบริเวณเหล่านี้ ผู้ขับรถบรรทุกจะไม่สามารถมองเห็นได้เลยไม่ว่าจะมองผ่านกระจกหน้าหรือกระจกมองข้าง!
+                </p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <!-- Zone 1 -->
+                    <div class="bg-slate-950 p-3.5 rounded-xl border-l-4 border-red-500">
+                        <h3 class="font-bold text-red-400 text-sm mb-1">1. ด้านหน้า (Front No-Zone)</h3>
+                        <p class="text-slate-400 text-xs">
+                            เนื่องจากหน้ารถสูง ทำให้มองไม่เห็นสิ่งกีดขวางในระยะ 2–3 เมตรหน้ากระโปรงรถ ห้ามตัดหน้าหรือขับจี้หน้ารถบรรทุกกระทันหัน
+                        </p>
+                    </div>
+                    <!-- Zone 2 -->
+                    <div class="bg-slate-950 p-3.5 rounded-xl border-l-4 border-red-500">
+                        <h3 class="font-bold text-red-400 text-sm mb-1">2. ด้านหลัง (Rear No-Zone)</h3>
+                        <p class="text-slate-400 text-xs">
+                            ตู้บรรสินค้าบังกระจกมองหลังอย่างสมบูรณ์ คนขับจะไม่เห็นรถที่ขับตามหลังในระยะ 10–15 เมตร หากคุณมองไม่เห็นกระจกมองข้างรถบรรทุก คนขับก็มองไม่เห็นคุณ
+                        </p>
+                    </div>
+                    <!-- Zone 3 -->
+                    <div class="bg-slate-950 p-3.5 rounded-xl border-l-4 border-red-500">
+                        <h3 class="font-bold text-red-400 text-sm mb-1">3. ด้านข้างฝั่งซ้าย (Left Side)</h3>
+                        <p class="text-slate-400 text-xs">
+                            <strong class="text-amber-400">เป็นจุดอับที่อันตรายและกว้างที่สุด!</strong> เนื่องจากพวงมาลัยอยู่ฝั่งขวา กระจกซ้ายจึงมีมุมมองจำกัดอย่างมากในการมองเห็นรถที่แซงหรือแทรกทางซ้าย
+                        </p>
+                    </div>
+                    <!-- Zone 4 -->
+                    <div class="bg-slate-950 p-3.5 rounded-xl border-l-4 border-red-500">
+                        <h3 class="font-bold text-red-400 text-sm mb-1">4. ด้านข้างฝั่งขวา (Right Side)</h3>
+                        <p class="text-slate-400 text-xs">
+                            แม้คนขับจะอยู่ฝั่งขวา แต่มุมมองเฉียงด้านหลังประตูและช่วงหางลากก็ยังคงเป็นจุดอับ หากขับขนานข้างรถบรรทุกควรเร่งแซงให้พ้นโดยเร็ว
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl text-amber-300 text-xs mt-4">
+                    <i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i> <strong>ข้อแนะนำความปลอดภัย:</strong> "ถ้าคุณมองไม่เห็นกระจกมองข้างของรถบรรทุก แสดงว่าคนขับรถบรรทุกก็มองไม่เห็นคุณเช่นกัน!"
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-slate-800 px-5 py-3 border-t border-slate-700 text-right">
+                <button id="modalUnderstandBtn" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-5 py-2 rounded-xl text-xs transition">
+                    เข้าใจแล้ว เริ่มฝึกขับรถ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Game Engine Script -->
+    <script>
+        /**
+         * Truck Blind Spot Simulator Engine
+         * Built for GitHub Pages (Pure JS HTML5 Canvas)
+         */
+
+        // Game Configuration & Global State
+        const CONFIG = {
+            truckWidth: 32,
+            truckLength: 65,
+            trailerLength: 75,
+            maxSpeed: 3.2,
+            reverseSpeed: -1.5,
+            accel: 0.08,
+            friction: 0.95,
+            steerSpeed: 0.04,
+            maxSteerAngle: 0.55
+        };
+
+        const state = {
+            currentLesson: 1,
+            showBlindZones: true,
+            score: 0,
+            collisions: 0,
+            mirrorChecked: false,
+            mirrorCheckTimer: 0,
+            warningMessage: '',
+            isWarningActive: false,
+            keys: {
+                forward: false,
+                backward: false,
+                left: false,
+                right: false,
+                mirror: false
+            }
+        };
+
+        // DOM Elements
+        let canvas, ctx;
+        let leftMirrorCanvas, leftMirrorCtx;
+        let rightMirrorCanvas, rightMirrorCtx;
+
+        // Entities Container
+        let truck = {
+            x: 400,
+            y: 350,
+            angle: -Math.PI / 2, // Facing Up
+            speed: 0,
+            steer: 0,
+            // Articulated Trailer
+            trailerAngle: -Math.PI / 2,
+            trailerX: 400,
+            trailerY: 420
+        };
+
+        let trafficEntities = [];
+        let roadMarkers = [];
+        let lessonTargets = [];
+
+        // Initialize Application
+        window.addEventListener('load', () => {
+            initCanvases();
+            setupEventListeners();
+            loadLesson(1);
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+            requestAnimationFrame(gameLoop);
+        });
+
+        function initCanvases() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+
+            leftMirrorCanvas = document.getElementById('leftMirrorCanvas');
+            leftMirrorCtx = leftMirrorCanvas.getContext('2d');
+
+            rightMirrorCanvas = document.getElementById('rightMirrorCanvas');
+            rightMirrorCtx = rightMirrorCanvas.getContext('2d');
+        }
+
+        function resizeCanvas() {
+            const container = document.getElementById('canvasContainer');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+
+        // Setup Controls & Handlers
+        function setupEventListeners() {
+            // Keyboard Listener
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'KeyW' || e.key === 'ArrowUp') state.keys.forward = true;
+                if (e.code === 'KeyS' || e.key === 'ArrowDown') state.keys.backward = true;
+                if (e.code === 'KeyA' || e.key === 'ArrowLeft') state.keys.left = true;
+                if (e.code === 'KeyD' || e.key === 'ArrowRight') state.keys.right = true;
+                if (e.code === 'Space') {
+                    state.keys.mirror = true;
+                    performMirrorCheck();
+                }
+                if (e.code === 'KeyV') toggleGuide();
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (e.code === 'KeyW' || e.key === 'ArrowUp') state.keys.forward = false;
+                if (e.code === 'KeyS' || e.key === 'ArrowDown') state.keys.backward = false;
+                if (e.code === 'KeyA' || e.key === 'ArrowLeft') state.keys.left = false;
+                if (e.code === 'KeyD' || e.key === 'ArrowRight') state.keys.right = false;
+                if (e.code === 'Space') state.keys.mirror = false;
+            });
+
+            // Mobile On-Screen Controls
+            const bindTouchBtn = (id, keyName) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.addEventListener('touchstart', (e) => { e.preventDefault(); state.keys[keyName] = true; });
+                btn.addEventListener('touchend', (e) => { e.preventDefault(); state.keys[keyName] = false; });
+                btn.addEventListener('mousedown', () => state.keys[keyName] = true);
+                btn.addEventListener('mouseup', () => state.keys[keyName] = false);
+            };
+
+            bindTouchBtn('btnGas', 'forward');
+            bindTouchBtn('btnBrake', 'backward');
+            bindTouchBtn('btnLeft', 'left');
+            bindTouchBtn('btnRight', 'right');
+
+            document.getElementById('btnMirror').addEventListener('click', () => {
+                performMirrorCheck();
+            });
+
+            // UI Buttons
+            document.getElementById('toggleGuideBtn').addEventListener('click', toggleGuide);
+            document.getElementById('toggleInfoBtn').addEventListener('click', () => toggleModal(true));
+            document.getElementById('closeModalBtn').addEventListener('click', () => toggleModal(false));
+            document.getElementById('modalUnderstandBtn').addEventListener('click', () => toggleModal(false));
+
+            document.getElementById('lessonSelect').addEventListener('change', (e) => {
+                loadLesson(parseInt(e.target.value));
+            });
+        }
+
+        function toggleGuide() {
+            state.showBlindZones = !state.showBlindZones;
+            document.getElementById('guideBtnText').innerText = state.showBlindZones 
+                ? 'ซ่อนพื้นที่มุมอับ ( [V] )' 
+                : 'แสดงพื้นที่มุมอับ ( [V] )';
+        }
+
+        function toggleModal(show) {
+            const modal = document.getElementById('infoModal');
+            if (show) modal.classList.remove('hidden');
+            else modal.classList.add('hidden');
+        }
+
+        function performMirrorCheck() {
+            state.mirrorChecked = true;
+            state.mirrorCheckTimer = 60; // Frame duration (~1 sec)
+            document.getElementById('mirrorCheckStatus').innerText = 'กำลังตรวจสอบ!';
+            document.getElementById('mirrorCheckStatus').className = 'font-bold text-emerald-400 text-base animate-pulse';
+            
+            setTimeout(() => {
+                document.getElementById('mirrorCheckStatus').innerText = 'พร้อม';
+                document.getElementById('mirrorCheckStatus').className = 'font-bold text-amber-400 text-base';
+            }, 1000);
+        }
+
+        // Lesson Management & Environments Setup
+        function loadLesson(lessonNum) {
+            state.currentLesson = lessonNum;
+            state.collisions = 0;
+            state.score = 0;
+            updateUI();
+
+            const objText = document.getElementById('lessonObjective');
+
+            // Reset Truck Position
+            truck.x = canvas.width ? canvas.width / 2 : 400;
+            truck.y = canvas.height ? canvas.height / 2 + 100 : 450;
+            truck.angle = -Math.PI / 2;
+            truck.speed = 0;
+            truck.trailerAngle = -Math.PI / 2;
+            truck.trailerX = truck.x;
+            truck.trailerY = truck.y + CONFIG.truckLength;
+
+            trafficEntities = [];
+            roadMarkers = [];
+
+            if (lessonNum === 1) {
+                objText.innerText = "บทที่ 1: ขับรถรอบพื้นที่ สังเกตตำแหน่งคนเดินเท้า ยานพาหนะ และกรวยจราจร เมื่อเข้าสู่ 'โซนสีแดง' (มุมอับสายตา)";
+                
+                // Spawn static pedestrians/cars around truck
+                trafficEntities.push(
+                    { type: 'pedestrian', x: truck.x - 70, y: truck.y - 20, radius: 10, label: 'คนเดินเท้า (ซ้าย)' },
+                    { type: 'car', x: truck.x + 80, y: truck.y + 40, width: 30, height: 50, angle: 0, color: '#3b82f6', label: 'รถยนต์ (จุดอับขวา)' },
+                    { type: 'motorcycle', x: truck.x - 20, y: truck.y + 110, width: 15, height: 30, color: '#eab308', label: 'มอเตอร์ไซค์ (ท้าย)' },
+                    { type: 'pedestrian', x: truck.x + 10, y: truck.y - 80, radius: 10, label: 'คนเดินเท้า (หน้า)' }
+                );
+            } 
+            else if (lessonNum === 2) {
+                objText.innerText = "บทที่ 2: ขับรถตรงไปตามเส้นทาง และคอยหมั่นกด [Spacebar] เพื่อส่องกระจกมองข้างเตือนภัย ยานพาหนะรอบข้างที่จะแอบเข้ามาในจุดอับ";
+                
+                // Dynamic moving hazard traffic
+                trafficEntities.push(
+                    { type: 'car', x: 200, y: 100, width: 30, height: 50, angle: 0, speed: 1.5, color: '#ef4444', isMoving: true },
+                    { type: 'motorcycle', x: 500, y: 600, width: 15, height: 30, angle: 0, speed: -2, color: '#eab308', isMoving: true },
+                    { type: 'pedestrian', x: 300, y: 300, radius: 10, speedX: 0.5, isMoving: true }
+                );
+            } 
+            else if (lessonNum === 3) {
+                objText.innerText = "บทที่ 3: ฝึกการเลี้ยวขวาในสี่แยกกว้าง ตรวจสอบว่าไม่มีรถจักรยานยนต์แซงด้านซ้ายล้อหลังขณะวงเลี้ยวพับเข้าหากัน!";
+                
+                // Intersections cones and hazard bikes
+                trafficEntities.push(
+                    { type: 'motorcycle', x: truck.x - 45, y: truck.y + 30, width: 15, height: 30, angle: 0, color: '#ec4899', isMoving: false },
+                    { type: 'cone', x: truck.x + 60, y: truck.y - 100 },
+                    { type: 'cone', x: truck.x + 60, y: truck.y - 160 }
+                );
+            }
+        }
+
+        // Game Update Loop
+        function update() {
+            // 1. Truck Steering & Driving Physics
+            if (state.keys.forward) {
+                if (truck.speed < CONFIG.maxSpeed) truck.speed += CONFIG.accel;
+            } else if (state.keys.backward) {
+                if (truck.speed > CONFIG.reverseSpeed) truck.speed -= CONFIG.accel;
+            } else {
+                truck.speed *= CONFIG.friction;
+            }
+
+            if (Math.abs(truck.speed) > 0.05) {
+                const dir = truck.speed > 0 ? 1 : -1;
+                if (state.keys.left) truck.angle -= CONFIG.steerSpeed * dir;
+                if (state.keys.right) truck.angle += CONFIG.steerSpeed * dir;
+            }
+
+            // Move Tractor Unit
+            truck.x += Math.cos(truck.angle) * truck.speed;
+            truck.y += Math.sin(truck.angle) * truck.speed;
+
+            // Update Articulated Trailer Kinematics
+            const targetTrailerX = truck.x - Math.cos(truck.angle) * (CONFIG.truckLength * 0.6);
+            const targetTrailerY = truck.y - Math.sin(truck.angle) * (CONFIG.truckLength * 0.6);
+
+            const dx = targetTrailerX - truck.trailerX;
+            const dy = targetTrailerY - truck.trailerY;
+            truck.trailerAngle = Math.atan2(dy, dx);
+
+            const distance = Math.hypot(dx, dy);
+            const followDist = CONFIG.trailerLength * 0.7;
+            
+            if (distance > followDist) {
+                truck.trailerX = targetTrailerX - Math.cos(truck.trailerAngle) * followDist;
+                truck.trailerY = targetTrailerY - Math.sin(truck.trailerAngle) * followDist;
+            }
+
+            // Update Dynamic Traffic Entities
+            trafficEntities.forEach(e => {
+                if (e.isMoving) {
+                    if (e.type === 'car') {
+                        e.y += e.speed;
+                        if (e.y > canvas.height + 50) e.y = -50;
+                        if (e.y < -50) e.y = canvas.height + 50;
+                    }
+                    if (e.type === 'motorcycle') {
+                        e.y += e.speed;
+                        if (e.y < -50) e.y = canvas.height + 50;
+                    }
+                    if (e.type === 'pedestrian') {
+                        e.x += e.speedX;
+                        if (e.x > truck.x + 150 || e.x < truck.x - 150) e.speedX *= -1;
+                    }
+                }
+            });
+
+            // Blind Spot Evaluation & Hazard Detection
+            checkBlindSpotHazards();
+        }
+
+        // Blind Spot Polygon Calculations & Collision Logic
+        function checkBlindSpotHazards() {
+            let hazardInBlindSpot = false;
+            let activeWarning = '';
+
+            // Calculate current 4 Blind Zones Polygons
+            const blindZones = getBlindSpotPolygons();
+
+            trafficEntities.forEach(entity => {
+                const ex = entity.x;
+                const ey = entity.y;
+
+                // Test if entity is inside any blind spot zone
+                const inFront = isPointInPolygon(ex, ey, blindZones.front);
+                const inRear = isPointInPolygon(ex, ey, blindZones.rear);
+                const inLeft = isPointInPolygon(ex, ey, blindZones.left);
+                const inRight = isPointInPolygon(ex, ey, blindZones.right);
+
+                entity.inBlindSpot = (inFront || inRear || inLeft || inRight);
+
+                if (entity.inBlindSpot) {
+                    hazardInBlindSpot = true;
+                    if (inLeft) activeWarning = "มีสิ่งกีดขวางในจุดอับ 'ด้านข้างฝั่งซ้าย'!";
+                    else if (inRight) activeWarning = "มีสิ่งกีดขวางในจุดอับ 'ด้านข้างฝั่งขวา'!";
+                    else if (inFront) activeWarning = "มีสิ่งกีดขวางในจุดอับ 'ด้านหน้า'!";
+                    else if (inRear) activeWarning = "มีสิ่งกีดขวางในจุดอับ 'ด้านหลัง'!";
+                }
+
+                // Check Physical Collision with Truck/Trailer Body
+                const distToTractor = Math.hypot(truck.x - ex, truck.y - ey);
+                const distToTrailer = Math.hypot(truck.trailerX - ex, truck.trailerY - ey);
+
+                if (distToTractor < 25 || distToTrailer < 30) {
+                    state.collisions++;
+                    updateUI();
+                }
+            });
+
+            // Update UI Warning Box
+            const warningBox = document.getElementById('warningBox');
+            if (hazardInBlindSpot) {
+                warningBox.classList.remove('hidden');
+                document.getElementById('warningMsg').innerText = activeWarning;
+                document.getElementById('driverStatusText').innerText = 'อันตราย! ตรวจสอบจุดอับ';
+                document.getElementById('driverStatusText').className = 'text-xs font-bold text-red-500 animate-pulse';
+            } else {
+                warningBox.classList.add('hidden');
+                document.getElementById('driverStatusText').innerText = 'ปลอดภัย';
+                document.getElementById('driverStatusText').className = 'text-xs font-bold text-emerald-400';
+            }
+        }
+
+        function getBlindSpotPolygons() {
+            // Front No-Zone
+            const frontDist = 65;
+            const frontWidth = 45;
+            const f1 = projectPoint(truck.x, truck.y, truck.angle - 0.5, 20);
+            const f2 = projectPoint(truck.x, truck.y, truck.angle + 0.5, 20);
+            const f3 = projectPoint(truck.x, truck.y, truck.angle + 0.4, frontDist);
+            const f4 = projectPoint(truck.x, truck.y, truck.angle - 0.4, frontDist);
+
+            // Rear No-Zone (Behind Trailer)
+            const rearDist = 110;
+            const rearWidth = 60;
+            const r1 = projectPoint(truck.trailerX, truck.trailerY, truck.trailerAngle + Math.PI - 0.4, 30);
+            const r2 = projectPoint(truck.trailerX, truck.trailerY, truck.trailerAngle + Math.PI + 0.4, 30);
+            const r3 = projectPoint(truck.trailerX, truck.trailerY, truck.trailerAngle + Math.PI + 0.5, rearDist);
+            const r4 = projectPoint(truck.trailerX, truck.trailerY, truck.trailerAngle + Math.PI - 0.5, rearDist);
+
+            // Left Side No-Zone (Passenger Side / Largest)
+            const l1 = projectPoint(truck.x, truck.y, truck.angle - Math.PI / 2, 15);
+            const l2 = projectPoint(truck.trailerX, truck.trailerY, truck.trailerAngle - Math.PI / 2, 15);
+            const l3 = projectPoint(truck.trailerX, truck.trailerY, truck.trailerAngle - Math.PI / 2 - 0.6, 120);
+            const l4 = projectPoint(truck.x, truck.y, truck.angle - Math.PI / 2 - 0.4, 90);
+
+            // Right Side No-Zone
+            const rt1 = projectPoint(truck.x, truck.y, truck.angle + Math.PI / 2, 15);
+            const rt2 = projectPoint(truck.trailerX, truck.trailerY, truck.trailerAngle + Math.PI / 2, 15);
+            const rt3 = projectPoint(truck.trailerX, truck.trailerY, truck.trailerAngle + Math.PI / 2 + 0.5, 80);
+            const rt4 = projectPoint(truck.x, truck.y, truck.angle + Math.PI / 2 + 0.3, 60);
+
+            return {
+                front: [f1, f2, f3, f4],
+                rear: [r1, r2, r3, r4],
+                left: [l1, l2, l3, l4],
+                right: [rt1, rt2, rt3, rt4]
+            };
+        }
+
+        // Point inside polygon math
+        function isPointInPolygon(px, py, poly) {
+            let collision = false;
+            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                const xi = poly[i].x, yi = poly[i].y;
+                const xj = poly[j].x, yj = poly[j].y;
+                const intersect = ((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+                if (intersect) collision = !collision;
+            }
+            return collision;
+        }
+
+        function projectPoint(x, y, angle, dist) {
+            return {
+                x: x + Math.cos(angle) * dist,
+                y: y + Math.sin(angle) * dist
+            };
+        }
+
+        // Render Main Canvas
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Road Layout Background
+            drawRoads();
+
+            // Draw Blind Spot Overlay Zones (If Enabled)
+            if (state.showBlindZones) {
+                drawBlindZones();
+            }
+
+            // Draw Traffic & Pedestrians
+            drawTrafficEntities();
+
+            // Draw Truck & Trailer Body
+            drawTruck();
+
+            // Render Mirror Canvases
+            renderMirrors();
+        }
+
+        function drawRoads() {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Lane Markings
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([20, 20]);
+
+            // Vertical Lanes
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 - 80, 0); ctx.lineTo(canvas.width / 2 - 80, canvas.height);
+            ctx.moveTo(canvas.width / 2 + 80, 0); ctx.lineTo(canvas.width / 2 + 80, canvas.height);
+            ctx.stroke();
+
+            // Horizontal Intersection
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2); ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function drawBlindZones() {
+            const zones = getBlindSpotPolygons();
+
+            const drawZonePoly = (poly, color, labelText) => {
+                ctx.beginPath();
+                ctx.moveTo(poly[0].x, poly[0].y);
+                for (let i = 1; i < poly.length; i++) {
+                    ctx.lineTo(poly[i].x, poly[i].y);
+                }
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Draw Zone Center Label
+                const centerX = poly.reduce((acc, p) => acc + p.x, 0) / poly.length;
+                const centerY = poly.reduce((acc, p) => acc + p.y, 0) / poly.length;
+                ctx.fillStyle = '#f87171';
+                ctx.font = '10px Prompt';
+                ctx.textAlign = 'center';
+                ctx.fillText(labelText, centerX, centerY);
+            };
+
+            // Red Translucent Color for Danger No-Zones
+            const dangerColor = 'rgba(239, 68, 68, 0.25)';
+
+            drawZonePoly(zones.front, dangerColor, 'มุมอับหน้า');
+            drawZonePoly(zones.rear, dangerColor, 'มุมอับหลัง');
+            drawZonePoly(zones.left, dangerColor, 'มุมอับใหญ่สุด (ซ้าย)');
+            drawZonePoly(zones.right, dangerColor, 'มุมอับขวา');
+        }
+
+        function drawTruck() {
+            // 1. Draw Trailer Unit
+            ctx.save();
+            ctx.translate(truck.trailerX, truck.trailerY);
+            ctx.rotate(truck.trailerAngle);
+
+            // Trailer Container Shadow & Body
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(-CONFIG.trailerLength / 2, -22, CONFIG.trailerLength, 44);
+            ctx.fillStyle = '#0284c7'; // Blue Container Body
+            ctx.fillRect(-CONFIG.trailerLength / 2 + 2, -20, CONFIG.trailerLength - 4, 40);
+
+            // Container Roof Lines
+            ctx.strokeStyle = '#0369a1';
+            ctx.lineWidth = 2;
+            for (let i = -CONFIG.trailerLength / 2 + 10; i < CONFIG.trailerLength / 2; i += 12) {
+                ctx.beginPath();
+                ctx.moveTo(i, -18); ctx.lineTo(i, 18);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            // 2. Draw Coupling / Fifth Wheel Hitch
+            ctx.beginPath();
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 4;
+            ctx.moveTo(truck.x, truck.y);
+            ctx.lineTo(truck.trailerX, truck.trailerY);
+            ctx.stroke();
+
+            // 3. Draw Tractor Unit Cabin
+            ctx.save();
+            ctx.translate(truck.x, truck.y);
+            ctx.rotate(truck.angle);
+
+            // Main Cabin Body
+            ctx.fillStyle = '#f59e0b'; // Amber Yellow Truck Cabin
+            ctx.fillRect(-20, -18, 40, 36);
+
+            // Windshield
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(5, -15, 10, 30);
+
+            // Driver Seat Indicator
+            ctx.fillStyle = '#10b981';
+            ctx.beginPath();
+            ctx.arc(2, 8, 3, 0, Math.PI * 2); // Right side driver seat
+            ctx.fill();
+
+            // Side Mirrors
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(8, -22, 6, 4); // Left Mirror
+            ctx.fillRect(8, 18, 6, 4);  // Right Mirror
+
+            // Headlights
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(18, -16, 3, 6);
+            ctx.fillRect(18, 10, 3, 6);
+
+            ctx.restore();
+        }
+
+        function drawTrafficEntities() {
+            trafficEntities.forEach(e => {
+                ctx.save();
+                ctx.translate(e.x, e.y);
+
+                // Highlight if inside blind spot
+                if (e.inBlindSpot) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 22, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
+                    ctx.fill();
+                }
+
+                if (e.type === 'pedestrian') {
+                    // Pedestrian Avatar
+                    ctx.fillStyle = e.inBlindSpot ? '#f87171' : '#38bdf8';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '10px Prompt';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('🚶', 0, 4);
+                } 
+                else if (e.type === 'car') {
+                    // Sedan Car
+                    ctx.rotate(e.angle || 0);
+                    ctx.fillStyle = e.color || '#3b82f6';
+                    ctx.fillRect(-e.width / 2, -e.height / 2, e.width, e.height);
+                    ctx.fillStyle = '#0f172a'; // Roof window
+                    ctx.fillRect(-e.width / 2 + 4, -e.height / 2 + 10, e.width - 8, e.height - 20);
+                } 
+                else if (e.type === 'motorcycle') {
+                    // Motorcycle
+                    ctx.fillStyle = e.color || '#eab308';
+                    ctx.fillRect(-5, -12, 10, 24);
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(-6, -8, 12, 3); // Handlebar
+                }
+                else if (e.type === 'cone') {
+                    // Traffic Cone
+                    ctx.fillStyle = '#f97316';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 7, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            });
+        }
+
+        // Simulated Side Mirrors View Engine
+        function renderMirrors() {
+            renderMirrorView(leftMirrorCtx, leftMirrorCanvas, -Math.PI / 2 - 0.2);
+            renderMirrorView(rightMirrorCtx, rightMirrorCanvas, Math.PI / 2 + 0.2);
+        }
+
+        function renderMirrorView(mCtx, mCanvas, relativeAngle) {
+            const w = mCanvas.width;
+            const h = mCanvas.height;
+            mCtx.clearRect(0, 0, w, h);
+
+            // Mirror View Background
+            mCtx.fillStyle = '#1e293b';
+            mCtx.fillRect(0, 0, w, h);
+
+            // Mirror Grid / Perspective Guide
+            mCtx.strokeStyle = '#334155';
+            mCtx.lineWidth = 1;
+            mCtx.beginPath();
+            mCtx.moveTo(w / 2, 0); mCtx.lineTo(w / 2, h);
+            mCtx.stroke();
+
+            // Transform origin relative to truck mirror sight line
+            const mirrorAngle = truck.angle + relativeAngle;
+
+            trafficEntities.forEach(e => {
+                // Vector from truck to entity
+                const dx = e.x - truck.x;
+                const dy = e.y - truck.y;
+                const dist = Math.hypot(dx, dy);
+
+                // Mirror FOV threshold distance (~160px)
+                if (dist < 180) {
+                    const angleToEntity = Math.atan2(dy, dx);
+                    let diffAngle = angleToEntity - mirrorAngle;
+
+                    // Normalize angle
+                    while (diffAngle < -Math.PI) diffAngle += Math.PI * 2;
+                    while (diffAngle > Math.PI) diffAngle -= Math.PI * 2;
+
+                    // If entity is within mirror cone sight angle
+                    if (Math.abs(diffAngle) < 0.6) {
+                        const mirrorX = (w / 2) + Math.sin(diffAngle) * (w / 1.2);
+                        const mirrorY = h - (dist / 180) * h;
+
+                        // Render reflected object icon in mirror
+                        mCtx.save();
+                        mCtx.translate(mirrorX, mirrorY);
+
+                        if (e.inBlindSpot && !state.mirrorChecked) {
+                            // Object hidden in blind spot unless player explicitly checks mirror!
+                            mCtx.fillStyle = 'rgba(239, 68, 68, 0.3)';
+                            mCtx.beginPath();
+                            mCtx.arc(0, 0, 6, 0, Math.PI * 2);
+                            mCtx.fill();
+                        } else {
+                            // Object visible in mirror view
+                            mCtx.fillStyle = e.type === 'pedestrian' ? '#38bdf8' : '#f59e0b';
+                            mCtx.beginPath();
+                            mCtx.arc(0, 0, 7, 0, Math.PI * 2);
+                            mCtx.fill();
+                            mCtx.strokeStyle = '#ffffff';
+                            mCtx.lineWidth = 1.5;
+                            mCtx.stroke();
+                        }
+
+                        mCtx.restore();
+                    }
+                }
+            });
+
+            // Draw Mirror Glass Reflection Shine overlay
+            mCtx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+            mCtx.fillRect(0, 0, w, h / 2);
+        }
+
+        function updateUI() {
+            document.getElementById('collisionCount').innerText = state.collisions;
+            document.getElementById('scoreText').innerText = `คะแนน: ${state.score}`;
+        }
+
+        // Main Animation Loop
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>
