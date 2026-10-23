@@ -51,35 +51,11 @@
             background: rgba(31, 41, 55, 0.8);
             border: 1px solid rgba(75, 85, 99, 0.6);
             backdrop-filter: blur(4px);
-            active: scale(0.95);
         }
         .control-btn:active {
             background: rgba(59, 130, 246, 0.6);
         }
     </style>
-    <!-- ===== Firebase: ตรวจสิทธิ์ / Logout / ตัด Session ===== -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyD7HPOhloICyxEyDTfR8yRiH2rT--q4fVo",
-    authDomain: "my-login-project-26857.firebaseapp.com",
-    projectId: "my-login-project-26857",
-    storageBucket: "my-login-project-26857.firebasestorage.app",
-    messagingSenderId: "199741800244",
-    appId: "1:199741800244:web:41b413f67038c687dc2f61"
-  };
-    const app = initializeApp(firebaseConfig);
-      const auth = getAuth(app);
-
-      // ตรวจสอบสถานะการเข้าสู่ระบบ
-      onAuthStateChanged(auth, (user) => {
-        if (!user) {
-          // ถ้ายังไม่ล็อกอิน ให้พาไปหน้า login.html
-          window.location.href = "login.html";
-        }
-      });
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden select-none">
 
@@ -97,12 +73,19 @@
 
         <!-- Desktop Quick Stats & Controls Header -->
         <div class="flex items-center space-x-4">
+            <!-- แสดงอีเมลผู้ใช้งาน -->
+            <span id="user-email" class="text-xs text-slate-400 hidden sm:inline"></span>
+            
             <button id="toggleGuideBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center transition">
                 <i class="fa-solid fa-eye text-amber-400 mr-2"></i>
                 <span id="guideBtnText">ซ่อนพื้นที่มุมอับ ( [V] )</span>
             </button>
             <button id="toggleInfoBtn" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center transition">
                 <i class="fa-solid fa-book-open mr-2"></i> คู่มือมุมอับสายตา
+            </button>
+            <!-- ปุ่ม Logout -->
+            <button id="logout-btn" class="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center transition">
+                <i class="fa-solid fa-right-from-bracket mr-1"></i> ออกจากระบบ
             </button>
         </div>
     </header>
@@ -306,6 +289,67 @@
             </div>
         </div>
     </div>
+
+    <!-- ===== Firebase: ตรวจสิทธิ์ / Logout / ตัด Session ===== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD7HPOhloICyxEyDTfR8yRiH2rT--q4fVo",
+            authDomain: "my-login-project-26857.firebaseapp.com",
+            projectId: "my-login-project-26857",
+            storageBucket: "my-login-project-26857.firebasestorage.app",
+            messagingSenderId: "199741800244",
+            appId: "1:199741800244:web:41b413f67038c687dc2f61"
+        };
+
+        const LOGIN_URL = "./index.html";
+        const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 นาที
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Firebase เป็นแหล่งความจริงเดียว (ไม่ใช้ localStorage ตัดสินสิทธิ์) จึงไม่เกิดลูป
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                const userEmailEl = document.getElementById("user-email");
+                if (userEmailEl) userEmailEl.textContent = user.email || "";
+                document.documentElement.classList.add("ready");
+                if (window.hubStart) window.hubStart();
+                startInactivityTimer();
+            } else {
+                window.location.replace(LOGIN_URL);
+            }
+        });
+
+        // Logout: เมื่อ signOut สำเร็จ onAuthStateChanged จะพากลับหน้า Login เอง
+        async function doLogout() {
+            try { await signOut(auth); }
+            catch (error) { console.error("Logout Error:", error); }
+        }
+        const logoutBtn = document.getElementById("logout-btn");
+        if (logoutBtn) logoutBtn.addEventListener("click", doLogout);
+
+        // ตัด Session อัตโนมัติเมื่อไม่มีการใช้งาน
+        let inactivityStarted = false;
+        function startInactivityTimer() {
+            if (inactivityStarted) return;
+            inactivityStarted = true;
+            let timer;
+            function reset() {
+                clearTimeout(timer);
+                timer = setTimeout(async () => {
+                    alert("หมดเวลาการใช้งานเนื่องจากไม่มีการเคลื่อนไหว กรุณาล็อกอินใหม่อีกครั้ง");
+                    await doLogout();
+                }, INACTIVITY_LIMIT);
+            }
+            ["mousemove", "keydown", "click", "scroll", "touchstart"].forEach((evt) =>
+                window.addEventListener(evt, reset, { passive: true })
+            );
+            reset();
+        }
+    </script>
 
     <!-- JavaScript Game Engine Script -->
     <script>
