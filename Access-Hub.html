@@ -273,7 +273,7 @@
   </div>
 
   <header class="reveal" style="--i:1">
-    <h1 id="title" class="typed" aria-label="HUB"></h1>
+    <h1 id="title" class="typed" aria-label="Access"></h1>
     <p id="greet">รวมลิงก์ที่ใช้บ่อยไว้ในที่เดียว</p>
   </header>
 
@@ -448,7 +448,7 @@
   window.hubStart = function () {
     if (started) return;
     started = true;
-    var text = "HUB", i = 0;
+    var text = "Access", i = 0;
     var still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (still) { title.textContent = text; title.classList.remove("typed"); return; }
     setTimeout(function type() {
