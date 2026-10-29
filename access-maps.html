@@ -38,8 +38,12 @@ button,input{font:inherit}button{cursor:pointer}
 .searchwrap span{position:absolute;left:12px;top:10px;color:var(--muted)}
 .searchwrap input{width:100%;height:39px;padding:0 12px 0 36px;border:1px solid var(--border);background:var(--panel2);border-radius:11px;color:var(--text);outline:none;font-size:12px}
 .searchwrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px #4776ff18}
-.filterline{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap}
-.chip{font-size:10px;color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 9px;background:transparent;cursor:pointer}
+.filterline{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
+.supplierselect{flex:1 1 100%;width:100%;height:33px;padding:0 10px;border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:8px;font-size:11px;outline:none;cursor:pointer}
+.supplierselect:focus,.supplierselect.on{border-color:var(--accent)}
+.supplierselect.on{background:color-mix(in srgb,var(--accent) 10%,var(--panel2));font-weight:600}
+.pointsup{color:var(--accent);font-weight:600}
+.chip{font-size:10px;color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 9px;background:transparent}
 .chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .pointlist{padding:8px;overflow:auto;flex:1;min-width:325px}
 .pointrow{display:flex;align-items:center;gap:11px;padding:12px 10px;border-radius:12px;cursor:pointer;border:1px solid transparent;transition:.15s}
@@ -49,7 +53,6 @@ button,input{font:inherit}button{cursor:pointer}
 .pointinfo{min-width:0;flex:1}
 .pointname{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pointcoord{font-size:10px;color:var(--muted);margin-top:5px;font-variant-numeric:tabular-nums}
-.pointsupplier{font-size:10px;color:var(--accent);margin-top:3px;font-weight:500}
 .pointarrow{color:var(--muted);font-size:17px}
 .sidefoot{border-top:1px solid var(--border);padding:13px 18px;min-width:325px;display:flex;justify-content:space-between;color:var(--muted);font-size:10px}
 .maparea{flex:1;min-width:0;position:relative;background:#dce5ed}
@@ -110,8 +113,7 @@ button,input{font:inherit}button{cursor:pointer}
       <div class="sidehead">
         <div class="side-title"><h2>รายการ Geofence</h2><span class="count" id="pointCount">0 จุด</span></div>
         <div class="searchwrap"><span>⌕</span><input id="searchInput" placeholder="ค้นหาชื่อ Geofence..." autocomplete="off"></div>
-        <!-- ส่วนแถบปุ่มฟิลเตอร์ Supplier จะถูกสร้างอัตโนมัติที่นี่ -->
-        <div class="filterline" id="supplierFilterContainer"></div>
+        <div class="filterline"><button class="chip active" data-filter="all">ทั้งหมด</button><button class="chip" data-filter="valid">มีพิกัด</button><button class="chip" data-filter="invalid">พิกัดไม่ครบ</button><select class="supplierselect" id="supplierSelect" title="กรองตาม Supplier"><option value="all">Supplier: ทั้งหมด</option></select></div>
       </div>
       <div class="pointlist" id="pointList"><div class="empty"><span class="loading"></span>กำลังโหลดรายการพิกัด</div></div>
       <div class="sidefoot"><span id="sourceLabel">Google Sheets API</span><span id="lastUpdated">—</span></div>
@@ -141,18 +143,21 @@ button,input{font:inherit}button{cursor:pointer}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
+/* ใช้ URL Web App ที่ผู้ใช้ให้มาลิงก์ล่าสุด */
 const API_URL = 'https://script.google.com/macros/s/AKfycbxGxDaEkB1IVbzSbMFkMJ08zfx9n9qIRDReGx9Mb-bg2n5C0jh8KuiwDnGjdjTvuVCF/exec';
 const $ = id => document.getElementById(id);
-let allRows = [], filteredRows = [], activeSupplier = 'all', selectedId = null, currentLayer = 'street';
+let allRows = [], filteredRows = [], activeFilter = 'all', activeSupplier = 'all', selectedId = null, currentLayer = 'street';
+const NO_SUPPLIER = '(ไม่ระบุ Supplier)';
 let markerById = new Map();
 
 const map = L.map('map',{zoomControl:false,preferCanvas:true}).setView([13.7563,100.5018],6);
 L.control.zoom({position:'bottomright'}).addTo(map);
 const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-  maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 });
+/* Esri World Imagery: ภาพดาวเทียม; ใช้งานจริงควรตรวจสอบเงื่อนไขผู้ให้บริการ */
 const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
-  maxZoom:19,attribution:'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+  maxZoom:19,attribution:'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
 });
 streetLayer.addTo(map);
 const clusters = L.markerClusterGroup({chunkedLoading:true,chunkInterval:100,chunkDelay:25,maxClusterRadius:55,showCoverageOnHover:false,removeOutsideVisibleBounds:true,spiderfyOnMaxZoom:true});
@@ -184,17 +189,16 @@ function normalizeRows(payload){
     rows=rows.slice(1).map(r=>Object.fromEntries(headers.map((h,i)=>[h,r[i]])));
   }
   return rows.map((r,i)=>{
-    if(Array.isArray(r)) return {id:i,name:String(r[0]??`จุดที่ ${i+1}`),lat:asNumber(r[1]),lng:asNumber(r[2]),supplier:'N/A',raw:r};
+    if(Array.isArray(r)) return {id:i,name:String(r[0]??`จุดที่ ${i+1}`),lat:asNumber(r[1]),lng:asNumber(r[2]),supplier:String(r[3]??'').trim()||NO_SUPPLIER,raw:r};
     const name=findValue(r,['Geofence']) || `จุดที่ ${i+1}`;
     const lat=asNumber(findValue(r,['Latitude','Lat']));
     const lng=asNumber(findValue(r,['Longitude','Long','Lng','Lon']));
-    const supplier=String(findValue(r,['Supplier','ผู้จำหน่าย'])||'ไม่ระบุ Supplier').trim();
+    const supplier=String(findValue(r,['Supplier','ซัพพลายเออร์','ผู้จัดหา'])??'').trim()||NO_SUPPLIER;
     return {id:i,name:String(name).trim(),lat,lng,supplier,raw:r};
   });
 }
 function validPoint(p){return p.lat!==null&&p.lng!==null&&p.lat>=-90&&p.lat<=90&&p.lng>=-180&&p.lng<=180}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&','<':'<','>':'>','"':'"',"'":'''}[c]))}
-
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function buildMarker(p){
   const marker=L.marker([p.lat,p.lng],{title:p.name});
   marker.bindPopup(`<div class="popup-title">${esc(p.name)}</div><div class="popup-coord">Supplier: ${esc(p.supplier)}<br>Latitude: ${p.lat}<br>Longitude: ${p.lng}</div>`);
@@ -202,73 +206,59 @@ function buildMarker(p){
   markerById.set(p.id,marker);
   return marker;
 }
-
-function renderSupplierFilters(){
-  const suppliers = [...new Set(allRows.map(p => p.supplier))].filter(Boolean);
-  const container = $('supplierFilterContainer');
-  if(!container) return;
-
-  let html = `<button class="chip ${activeSupplier === 'all' ? 'active' : ''}" data-supplier="all">ทั้งหมด</button>`;
-  suppliers.forEach(sup => {
-    html += `<button class="chip ${activeSupplier === sup ? 'active' : ''}" data-supplier="${esc(sup)}">${esc(sup)}</button>`;
-  });
-  container.innerHTML = html;
-
-  container.querySelectorAll('.chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      activeSupplier = btn.dataset.supplier;
-      renderSupplierFilters();
-      renderList();
-    });
-  });
-}
-
 function renderMap(){
-  clusters.clearLayers(); markerById.clear();
-  const valid = allRows.filter(validPoint);
-  const markers = valid.map(buildMarker);
+  clusters.clearLayers();markerById.clear();
+  const bySupplier=allRows.filter(p=>activeSupplier==='all'||p.supplier===activeSupplier);
+  const valid=bySupplier.filter(validPoint);
+  const markers=valid.map(buildMarker);
   clusters.addLayers(markers);
-  $('statTotal').textContent = allRows.length.toLocaleString('th-TH');
-  $('statValid').textContent = valid.length.toLocaleString('th-TH');
+  $('statTotal').textContent=bySupplier.length.toLocaleString('th-TH');
+  $('statValid').textContent=valid.length.toLocaleString('th-TH');
   if(valid.length===1) map.setView([valid[0].lat,valid[0].lng],13);
   else if(valid.length>1) map.fitBounds(L.latLngBounds(valid.map(p=>[p.lat,p.lng])),{padding:[45,45],maxZoom:12});
 }
-
-function renderList(){
-  const q = $('searchInput').value.trim().toLocaleLowerCase();
-  filteredRows = allRows.filter(p => {
-    const matches = p.name.toLocaleLowerCase().includes(q) || p.supplier.toLocaleLowerCase().includes(q);
-    const matchSupplier = (activeSupplier === 'all' || p.supplier === activeSupplier);
-    return matches && matchSupplier;
+function buildSupplierOptions(){
+  const counts=new Map();
+  allRows.forEach(p=>counts.set(p.supplier,(counts.get(p.supplier)||0)+1));
+  const names=[...counts.keys()].sort((a,b)=>{
+    if(a===NO_SUPPLIER) return 1; if(b===NO_SUPPLIER) return -1;
+    return a.localeCompare(b,'th');
   });
-
-  $('pointCount').textContent = `${filteredRows.length.toLocaleString('th-TH')} จุด`;
+  if(activeSupplier!=='all'&&!counts.has(activeSupplier)) activeSupplier='all';
+  const sel=$('supplierSelect');
+  sel.innerHTML=`<option value="all">Supplier: ทั้งหมด (${allRows.length.toLocaleString('th-TH')})</option>`+
+    names.map(n=>`<option value="${esc(n)}">${esc(n)} (${counts.get(n).toLocaleString('th-TH')})</option>`).join('');
+  sel.value=activeSupplier;
+  sel.classList.toggle('on',activeSupplier!=='all');
+}
+function renderList(){
+  const q=$('searchInput').value.trim().toLocaleLowerCase();
+  filteredRows=allRows.filter(p=>{
+    const matches=(p.name+' '+p.supplier).toLocaleLowerCase().includes(q);
+    if(activeSupplier!=='all'&&p.supplier!==activeSupplier) return false;
+    const valid=validPoint(p);
+    return matches&&(activeFilter==='all'||(activeFilter==='valid'&&valid)||(activeFilter==='invalid'&&!valid));
+  });
+  $('pointCount').textContent=`${filteredRows.length.toLocaleString('th-TH')} จุด`;
   if(!filteredRows.length){$('pointList').innerHTML='<div class="empty">ไม่พบรายการที่ตรงกับการค้นหา</div>';return}
-
-  $('pointList').innerHTML = filteredRows.map(p => {
-    const valid = validPoint(p), selected = selectedId === p.id;
+  $('pointList').innerHTML=filteredRows.map(p=>{
+    const valid=validPoint(p), selected=selectedId===p.id;
     return `<div class="pointrow ${selected?'selected':''}" data-id="${p.id}">
       <div class="pin">${valid?'⌖':'!'}</div>
-      <div class="pointinfo">
-        <div class="pointname">${esc(p.name)}</div>
-        <div class="pointcoord">${valid?`${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`:'ไม่พบพิกัด'}</div>
-        <div class="pointsupplier">Supplier: ${esc(p.supplier)}</div>
-      </div>
+      <div class="pointinfo"><div class="pointname">${esc(p.name)}</div><div class="pointcoord">${valid?`${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`:'ไม่พบ Latitude / Longitude'}${p.supplier!==NO_SUPPLIER?` · <span class="pointsup">${esc(p.supplier)}</span>`:''}</div></div>
       <div class="pointarrow">${valid?'›':'·'}</div>
     </div>`;
   }).join('');
-
-  $('pointList').querySelectorAll('.pointrow').forEach(el => el.addEventListener('click', () => {
-    const id = Number(el.dataset.id), p = allRows.find(x => x.id === id);
-    if(!p) return;
-    selectedId = id; renderList();
+  $('pointList').querySelectorAll('.pointrow').forEach(el=>el.addEventListener('click',()=>{
+    const id=Number(el.dataset.id),p=allRows.find(x=>x.id===id);
+    if(!p)return;
+    selectedId=id;renderList();
     if(!validPoint(p)){toast('รายการนี้ไม่มีพิกัด Latitude / Longitude ที่ถูกต้อง');return}
     if($('sidebar').classList.contains('collapsed')&&window.innerWidth<=850) $('sidebar').classList.add('collapsed');
     map.flyTo([p.lat,p.lng],Math.max(map.getZoom(),15),{duration:.7});
-    const marker = markerById.get(id); if(marker) setTimeout(()=>marker.openPopup(),500);
+    const marker=markerById.get(id);if(marker) setTimeout(()=>marker.openPopup(),500);
   }));
 }
-
 async function loadData(){
   $('statusText').textContent='กำลังโหลดข้อมูล...';
   $('pointList').innerHTML='<div class="empty"><span class="loading"></span>กำลังโหลดรายการพิกัด</div>';
@@ -278,23 +268,29 @@ async function loadData(){
     if(!response.ok) throw new Error(`HTTP ${response.status}`);
     const payload=await response.json();
     allRows=normalizeRows(payload);
-    
-    renderSupplierFilters(); // สร้างปุ่ม Filter ตาม Supplier ที่ดึงมาได้
-    renderMap();
-    renderList();
-
+    buildSupplierOptions();
+    renderMap();renderList();
     $('statusText').textContent='เชื่อมต่อข้อมูลแล้ว';
     $('lastUpdated').textContent=new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
     toast(`โหลดข้อมูลสำเร็จ ${allRows.length.toLocaleString('th-TH')} รายการ`);
   }catch(err){
     console.error(err);
     $('statusText').textContent='โหลดข้อมูลไม่สำเร็จ';
-    $('pointList').innerHTML=`<div class="empty">ไม่สามารถโหลดข้อมูลได้<br><br>${esc(err.message)}</div>`;
-    toast('โหลดข้อมูลไม่สำเร็จ — ตรวจสอบ URL และสิทธิ์ Web App',5000);
+    $('pointList').innerHTML=`<div class="empty">ไม่สามารถโหลดข้อมูลได้<br><br>${esc(err.message)}<br><br>ตรวจสอบว่า Apps Script เปิดสิทธิ์ Web app ให้เข้าถึงได้ และส่งข้อมูล JSON ที่มีคอลัมน์ Geofence, Latitude, Longitude</div>`;
+    toast('โหลดข้อมูลไม่สำเร็จ — ตรวจสอบ URL, สิทธิ์ Web App และ CORS',5000);
   }finally{$('refreshBtn').disabled=false}
 }
-
 $('searchInput').addEventListener('input',renderList);
+$('supplierSelect').addEventListener('change',e=>{
+  activeSupplier=e.target.value;
+  e.target.classList.toggle('on',activeSupplier!=='all');
+  selectedId=null;
+  renderMap();renderList();
+});
+document.querySelectorAll('.chip').forEach(btn=>btn.addEventListener('click',()=>{
+  document.querySelectorAll('.chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');activeFilter=btn.dataset.filter;renderList();
+}));
 $('sidebarToggle').addEventListener('click',()=>{ $('sidebar').classList.toggle('collapsed');setTimeout(()=>map.invalidateSize(),280); });
 $('themeToggle').addEventListener('click',()=>{
   document.body.classList.toggle('dark');
