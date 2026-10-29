@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Access Maps | Location Intelligence</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <style>
 :root{--bg:#f3f6fb;--panel:#fff;--panel2:#f7f9fc;--text:#182235;--muted:#718096;--line:#e5eaf2;--accent:#4868f5;--accent2:#8b5cf6;--shadow:0 12px 35px #26365a12}
@@ -73,8 +73,9 @@ button,input,select{font:inherit}button{cursor:pointer}.app{height:100vh;min-hei
   </main>
 </div>
 </div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 <script>
 (() => {
 'use strict';
@@ -85,10 +86,9 @@ let points = [], selected = null, elevationOn = false, satelliteOn = false;
 function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.classList.remove('show'),3600)}
 function setApiStatus(ok,msg,err){$('apiStatus').textContent=msg;$('apiDot').classList.toggle('online',ok);$('apiDot').classList.toggle('error',!!err)}
 function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[c]));
 }
 
-// ถ้าไลบรารีแผนที่โหลดไม่ขึ้น ให้แจ้งผู้ใช้ชัดเจน แทนที่จะค้างเงียบ ๆ
 if (typeof L === 'undefined' || typeof L.markerClusterGroup !== 'function') {
   setApiStatus(false,'โหลดไลบรารีแผนที่ไม่สำเร็จ',true);
   $('pointList').innerHTML='<div class="empty"><i class="fa-solid fa-triangle-exclamation" style="font-size:24px;color:#f0ad4e"></i><br><b>โหลด Leaflet ไม่สำเร็จ</b><br>ตรวจสอบอินเทอร์เน็ตหรือการบล็อก CDN แล้วรีเฟรชหน้า</div>';
@@ -108,7 +108,6 @@ const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
 streetLayer.addTo(map);
 let currentLayer = streetLayer;
 
-// อ่านค่าจากคอลัมน์โดยไม่สนช่องว่างส่วนเกิน/ตัวพิมพ์เล็กใหญ่
 function getField(r, key){
   const k = Object.keys(r).find(x => x.trim().toLowerCase() === key.toLowerCase());
   return k !== undefined ? r[k] : undefined;
