@@ -354,9 +354,55 @@ $('#bReset').onclick=()=>{F={};['fDept','fShift','fFlag','fStat','fQ'].forEach(i
 [['fDept','dept'],['fShift','shift'],['fFlag','flag'],['fStat','stat']].forEach(([i,k])=>$('#'+i).onchange=e=>{F[k]=e.target.value;render()});
 $('#fQ').oninput=e=>{F.q=e.target.value.trim().toLowerCase();render()};
 $('#tb').onclick=e=>{const b=e.target.closest('[data-id]');if(!b)return;const x=rows[+b.dataset.id];x.checked=!x.checked;render()};
+// ฟังก์ชันสำหรับโหลดไฟล์ vehicle-alerts.csv จากโฟลเดอร์ data อัตโนมัติ
+function loadDefaultCsv(){
+  fetch('data/vehicle-alerts.csv')
+    .then(response => {
+      if (!response.ok) throw new Error('ไม่พบไฟล์ data/vehicle-alerts.csv');
+      return response.arrayBuffer();
+    })
+    .then(buffer => {
+      const wb = XLSX.read(buffer, {type: 'array', cellDates: true});
+      const js = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval: '', raw: true});
+      if (!js.length) throw new Error('ไฟล์ไม่มีข้อมูล');
+      const hs = Object.keys(js[0]), col = {};
+      for (const k in SYN) col[k] = hs.find(h => SYN[k].includes(norm(h))) || hs.find(h => SYN[k].some(s => norm(h).includes(s)));
+      if (!col.plate) throw new Error('ไม่พบคอลัมน์ ทะเบียนรถ');
+      const out = [];
+      js.forEach(o => {
+        const plate = String(o[col.plate]).trim(); if (!plate) return;
+        const dv = col.date ? o[col.date] : '';
+        const time = normTime(col.time ? o[col.time] : dv) || '00:00';
+        const date = normDate(dv); if (!date) return;
+        const fl = col.flag ? String(o[col.flag]).trim().toUpperCase() : '';
+        const stt = col.stat ? String(o[col.stat]).toLowerCase() : '';
+        const sh = col.shift ? String(o[col.shift]).toLowerCase() : '';
+        out.push({
+          plate, 
+          dept: String(o[col.dept] || 'ไม่ระบุ').trim(), 
+          type: String(o[col.type] || 'ไม่ระบุ').trim(), 
+          time, 
+          date,
+          flag: fl === 'TRUE' || fl === '1' || fl === 'จริง' || o[col.flag] === true,
+          checked: !/ยังไม่|ไม่ได้|unchecked|false|^no$|^0$/.test(stt) && /ตรวจแล้ว|checked|true|yes|done|^1$/.test(stt),
+          shift: /night|ดึก|กลางคืน|^n$/.test(sh) ? 'Night' : /day|เช้า|กลางวัน|^d$/.test(sh) ? 'Day' : ''
+        });
+      });
+      if (!out.length) throw new Error('ไม่พบแถวที่ใช้ได้');
+      rows = out; 
+      load('vehicle-alerts.csv'); 
+      toast('โหลดข้อมูลจาก data/vehicle-alerts.csv สำเร็จ');
+    })
+    .catch(err => {
+      console.warn(err.message);
+      sample();
+      toast('ใช้ข้อมูลตัวอย่าง (ไม่พบไฟล์ CSV ในโฟลเดอร์ data)');
+    });
+}
+
 let t0='dark';try{const t=localStorage.getItem('va-theme');if(t==='light'||t==='dark')t0=t}catch(e){}
 setTheme(t0,false);
-sample();
+loadDefaultCsv(); // <--- นำมาวางแทนที่ตรงจุดนี้
 </script>
 </body>
 </html>
