@@ -95,7 +95,7 @@ if (typeof L === 'undefined' || typeof L.markerClusterGroup !== 'function') {
   return;
 }
 
-const map = L.map('map', {zoomControl:false}).setView([13.7563,100.5018],6);
+const map = L.map('map', {zoomControl:false, maxZoom:19}).setView([13.7563,100.5018],6);
 L.control.zoom({position:'bottomright'}).addTo(map);
 
 const markerClusterGroup = L.markerClusterGroup({maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true});
