@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="th" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vehicle Alert Center</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#eef2f8;--bg2:#fff;--fg:#0f172a;--muted:#64748b;--card:rgba(255,255,255,.75);--bd:rgba(15,23,42,.1);--grid:rgba(15,23,42,.08);--acc:#f26b0f;--acc2:#0891b2;--good:#059669;--bad:#dc2626;--warn:#d97706}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#070b16;--bg2:#0b1222;--fg:#e6ebf5;--muted:#8b98b3;--card:rgba(255,255,255,.05);--bd:rgba(255,255,255,.1);--grid:rgba(255,255,255,.07);--acc:#ff7a1a;--acc2:#22d3ee;--good:#34d399;--bad:#f87171;--warn:#fbbf24}}
+:root[data-theme="dark"]{--bg:#070b16;--bg2:#0b1222;--fg:#e6ebf5;--muted:#8b98b3;--card:rgba(255,255,255,.05);--bd:rgba(255,255,255,.1);--grid:rgba(255,255,255,.07);--acc:#ff7a1a;--acc2:#22d3ee;--good:#34d399;--bad:#f87171;--warn:#fbbf24}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:Prompt,sans-serif;min-height:100vh}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--bg)}
+.fx{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:.3}
+.o1{width:480px;height:480px;background:var(--acc);top:-180px;left:-120px}.o2{width:420px;height:420px;background:var(--acc2);top:25%;right:-160px}
+.wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0 16px 32px}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 0;background:color-mix(in srgb,var(--bg) 75%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--bd)}
+.logo{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--acc),#ff3d71)}
+.ttl{margin-right:auto}.ttl b{display:block;font-size:1.05rem}.ttl small{color:var(--muted);font-size:.75rem}
+.btn{padding:.5rem .85rem;border-radius:.8rem;font:500 .85rem Prompt,sans-serif;border:1px solid var(--bd);background:var(--card);color:var(--fg);cursor:pointer}
+.btn:hover{border-color:var(--acc)}.btn.p{background:linear-gradient(135deg,var(--acc),#ff3d71);color:#fff;border-color:transparent}
+.glass{background:var(--card);backdrop-filter:blur(16px);border:1px solid var(--bd);border-radius:1.1rem;padding:16px}
+h2{font-size:clamp(1.7rem,4vw,2.8rem);margin:.9rem 0 .2rem;font-weight:700}
+.hero-title{background:linear-gradient(100deg,var(--fg) 20%,var(--acc) 55%,var(--acc2) 90%);background-size:200% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 8s linear infinite}
+@keyframes shine{to{background-position:200% center}}
+@media(prefers-reduced-motion:reduce){.hero-title{animation:none}}
+.seg{display:inline-flex;padding:3px;border-radius:.8rem;border:1px solid var(--bd);background:var(--card);gap:2px}
+.seg button{padding:.35rem .8rem;border-radius:.6rem;border:0;background:transparent;color:var(--muted);font:500 .82rem Prompt,sans-serif;cursor:pointer}
+.seg button[aria-pressed="true"]{background:linear-gradient(135deg,var(--acc),#ff3d71);color:#fff}
+.seg button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.sub{color:var(--muted);font-size:.9rem;margin:0 0 16px}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+.sel{background:var(--bg2);color:var(--fg);border:1px solid var(--bd);border-radius:.7rem;padding:.45rem .7rem;font:400 .85rem Prompt,sans-serif}
+.sel:focus-visible,.btn:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
+.kpi small{color:var(--muted);font-size:.78rem}.kpi b{display:block;font-size:2rem;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}.kpi span{font-size:.78rem;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
+.grid .w{grid-column:1/-1}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+.ct{font-weight:600;margin-bottom:10px}.cv{position:relative;height:260px}
+.ins{display:flex;gap:10px;padding:10px;border:1px solid var(--bd);border-radius:.9rem;margin-top:8px;font-size:.88rem}
+.ins i{flex:none;width:8px;border-radius:9px}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:760px}
+th{font-weight:500;color:var(--muted);font-size:.75rem;text-align:left;padding:.5rem .5rem;border-bottom:1px solid var(--bd)}
+td{padding:.55rem .5rem;font-size:.85rem;border-bottom:1px solid var(--bd);font-variant-numeric:tabular-nums}
+.tag{display:inline-block;padding:.15rem .6rem;border-radius:99px;font-size:.75rem;font-weight:500;border:0;font-family:inherit}
+.t-t{color:var(--bad);background:color-mix(in srgb,var(--bad) 15%,transparent)}.t-f{color:var(--muted);background:var(--grid)}
+.t-ok{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}.t-no{color:var(--warn);background:color-mix(in srgb,var(--warn) 18%,transparent);cursor:pointer}
+.t-d{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}.t-n{color:var(--acc2);background:color-mix(in srgb,var(--acc2) 15%,transparent)}
+#toast{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--bg2);border:1px solid var(--bd);padding:.7rem 1rem;border-radius:.9rem;font-size:.88rem;display:none;z-index:70}
+.btn.a{background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;border-color:transparent}
+#pres{position:fixed;inset:0;z-index:100;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+#pres[hidden]{display:none}
+#pbar{height:4px;width:0;background:linear-gradient(90deg,var(--acc),#ff3d71,var(--acc2));transition:width .5s}
+#stage{flex:1;min-height:0;padding:clamp(16px,4vw,56px);display:flex;flex-direction:column;justify-content:center;overflow:auto}
+.sl{animation:sIn .6s both}
+@keyframes sIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.sl{animation:none}}
+.sl h3{font-size:clamp(1.4rem,3vw,2.2rem);margin:0 0 14px;font-weight:600}
+.sl .kpi b{font-size:clamp(2.4rem,6vw,4rem)}.sl .kpi small,.sl .kpi span{font-size:.95rem}
+.sl .ins{font-size:1.05rem;padding:14px}
+.pcv{position:relative;height:min(52vh,460px)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:800px){.two{grid-template-columns:1fr}}
+#pnav{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;flex-wrap:wrap}
+.pdot{width:8px;height:8px;border-radius:99px;background:var(--grid);border:0;padding:0;cursor:pointer;transition:.3s}
+.pdot.on{width:26px;background:var(--acc)}
+#pClose{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);right:14px;z-index:2}
+#pcount{color:var(--muted);font-size:.85rem;min-width:56px;text-align:center}
+@media print{header,.filters,.fx,#pres{display:none}}
+</style>
+</head>
+<body>
+<div class="fx" aria-hidden="true"><div class="orb o1"></div><div class="orb o2"></div></div>
+<div class="wrap">
+<header>
+  <div class="logo">VA</div>
+  <div class="ttl"><b>Vehicle Alert Center</b><small id="src">ข้อมูลตัวอย่าง</small></div>
+  <button class="btn p" id="bImp">นำเข้า Excel / CSV</button>
+  <input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" hidden>
+  <button class="btn" id="bSam">ข้อมูลตัวอย่าง</button>
+  <button class="btn" id="bCsv">ส่งออก CSV</button>
+  <button class="btn a" id="bPres" title="โหมดนำเสนอเต็มจอ">นำเสนอ</button>
+  <div class="seg" role="group" aria-label="โหมดหน้าเว็บ"><button type="button" data-theme-set="light" aria-pressed="false">โทนสว่าง</button><button type="button" data-theme-set="dark" aria-pressed="true">โทนมืด</button></div>
+</header>
+
+<h2 class="hero-title">การแจ้งเตือนจากระบบรถ</h2>
+<p class="sub" id="hero">—</p>
+
+<div class="glass filters">
+  <select class="sel" id="fDept"></select>
+  <select class="sel" id="fShift"><option value="">ทุกกะ</option><option>Day</option><option>Night</option></select>
+  <select class="sel" id="fFlag"><option value="">TRUE/FALSE ทั้งหมด</option><option value="T">TRUE</option><option value="F">FALSE</option></select>
+  <select class="sel" id="fStat"><option value="">ทุกสถานะการตรวจ</option><option value="Y">ตรวจแล้ว</option><option value="N">ยังไม่ตรวจ</option></select>
+  <input class="sel" id="fQ" placeholder="ค้นหาทะเบียนรถ" aria-label="ค้นหาทะเบียนรถ">
+  <button class="btn" id="bReset">ล้างตัวกรอง</button>
+</div>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="grid">
+  <div class="glass"><div class="ct">เรื่องที่เตือนบ่อยที่สุด</div><div class="cv"><canvas id="cType"></canvas></div></div>
+  <div class="glass"><div class="ct">จำนวนแจ้งเตือนรายชั่วโมง (TRUE/FALSE)</div><div class="cv"><canvas id="cHour"></canvas></div></div>
+  <div class="glass"><div class="ct">กะทำงาน × สถานะการตรวจ</div><div class="cv"><canvas id="cShift"></canvas></div></div>
+  <div class="glass"><div class="ct">หน่วยงาน × สถานะการตรวจ</div><div class="cv"><canvas id="cDept"></canvas></div></div>
+  <div class="glass w"><div class="ct">แนวโน้มรายวัน</div><div class="cv"><canvas id="cTrend"></canvas></div></div>
+</div>
+
+<div class="glass" style="margin-bottom:16px"><div class="ct">ข้อสังเกตอัตโนมัติ</div><div id="ins"></div></div>
+
+<div class="glass">
+  <div class="ct">รายการล่าสุด <small style="color:var(--muted);font-weight:400">กดป้ายสถานะ เพื่อเปลี่ยนเป็นตรวจแล้ว/ยังไม่ตรวจ</small></div>
+  <div class="tw"><table><thead><tr><th>ทะเบียนรถ</th><th>หน่วยงาน</th><th>เรื่องที่เตือน</th><th>เวลา</th><th>วันที่</th><th>TRUE/FALSE</th><th>การตรวจสอบ</th><th>กะ</th></tr></thead><tbody id="tb"></tbody></table></div>
+  <p class="sub" id="more" style="margin:10px 0 0"></p>
+</div>
+</div>
+<div id="pres" hidden role="dialog" aria-label="โหมดนำเสนอ">
+  <div id="pbar"></div>
+  <button class="btn" id="pClose" aria-label="ปิดโหมดนำเสนอ">ปิด</button>
+  <div id="stage"></div>
+  <nav id="pnav" aria-label="ควบคุมสไลด์">
+    <button class="btn" id="pPrev" aria-label="สไลด์ก่อนหน้า">ก่อนหน้า</button>
+    <div id="pdots" style="display:flex;gap:6px;align-items:center"></div>
+    <span id="pcount"></span>
+    <button class="btn" id="pNext" aria-label="สไลด์ถัดไป">ถัดไป</button>
+    <button class="btn" id="pPlay">เล่นอัตโนมัติ</button>
+    <button class="btn" id="pFull">เต็มจอ</button>
+  </nav>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const p2=n=>String(n).padStart(2,'0');
+const iso=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+const thDate=s=>{const [y,m,d]=s.split('-');return d+'/'+m+'/'+(+y+543)};
+const shiftOf=t=>{const h=parseInt(t);return h>=6&&h<18?'Day':'Night'};
+const DEPTS=['ขนส่ง','คลังสินค้า','ซ่อมบำรุง','โลจิสติกส์','ปฏิบัติการ'];
+const TYPES=['ขับเร็วเกินกำหนด','เบรกกะทันหัน','ง่วงนอน','ออกนอกเส้นทาง','จอดนานผิดปกติ','แบตเตอรี่ต่ำ','ประตูเปิดขณะวิ่ง','อุณหภูมิเครื่องยนต์สูง','ไม่คาดเข็มขัด'];
+let rows=[],F={},charts={};
+const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',3000)};
+const cv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function sample(){
+  let seed=7;const r=()=>(seed=(seed*1664525+1013904223)>>>0)/4294967296,pick=a=>a[Math.floor(r()*a.length)];
+  const pl=Array.from({length:28},()=>pick(['กข','ขค','งจ','ฉช','ศษ','1กก','2ขข','3งง'])+' '+(1000+Math.floor(r()*8999)));
+  const dp=pl.map(()=>pick(DEPTS));
+  rows=[];
+  for(let i=0;i<280;i++){
+    const k=Math.floor(r()*pl.length),night=r()<.42;
+    const h=night?pick([18,19,20,21,22,23,0,1,2,3,4,5]):6+Math.floor(r()*12),back=Math.floor(r()*14);
+    const d=new Date();d.setDate(d.getDate()-back);
+    rows.push({plate:pl[k],dept:dp[k],type:night&&r()<.35?'ง่วงนอน':pick(TYPES),time:p2(h)+':'+p2(Math.floor(r()*60)),date:iso(d),flag:r()<.62,checked:r()<(back>3?.85:.35)});
+  }
+  load('ข้อมูลตัวอย่าง');
+}
+function load(name){
+  rows.forEach((x,i)=>{x.id=i;x.shift=x.shift||shiftOf(x.time)});
+  $('#src').textContent=name+' · '+rows.length+' รายการ';
+  F={};['fShift','fFlag','fStat','fQ'].forEach(i=>$('#'+i).value='');
+  const ds=[...new Set(rows.map(x=>x.dept))].sort();
+  $('#fDept').innerHTML='<option value="">ทุกหน่วยงาน</option>'+ds.map(d=>`<option>${esc(d)}</option>`).join('');
+  render();
+}
+const filt=()=>rows.filter(x=>(!F.dept||x.dept===F.dept)&&(!F.shift||x.shift===F.shift)&&(!F.flag||(F.flag==='T')===x.flag)&&(!F.stat||(F.stat==='Y')===x.checked)&&(!F.q||x.plate.toLowerCase().includes(F.q)));
+const cnt=(a,f)=>{const m={};a.forEach(x=>{const k=f(x);m[k]=(m[k]||0)+1});return m};
+
+function mk(id,type,data,opt){
+  charts[id]&&charts[id].destroy();
+  charts[id]=new Chart($('#'+id),{type,data,options:Object.assign({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:data.datasets.length>1,labels:{boxWidth:10}}}},opt||{})});
+}
+function render(){
+  const a=filt(),n=a.length,T=a.filter(x=>x.flag).length,U=a.filter(x=>!x.checked).length,N=a.filter(x=>x.shift==='Night').length;
+  const ds=a.map(x=>x.date).sort();
+  $('#hero').textContent=n?`${n} รายการ · ช่วงวันที่ ${thDate(ds[0])} – ${thDate(ds[n-1])}`:'ไม่พบข้อมูลตามตัวกรอง';
+  const pc=(v)=>n?Math.round(v/n*100)+'%':'–';
+  $('#kpis').innerHTML=[
+    ['แจ้งเตือนทั้งหมด',n,'รายการ','var(--fg)'],
+    ['TRUE',T,pc(T)+' ของทั้งหมด','var(--bad)'],
+    ['ยังไม่ตรวจ',U,pc(U)+' ของทั้งหมด','var(--warn)'],
+    ['ตรวจแล้ว',n-U,pc(n-U)+' ของทั้งหมด','var(--good)'],
+    ['กะ Night',N,pc(N)+' ของทั้งหมด','var(--acc2)']
+  ].map(k=>`<div class="glass kpi"><small>${k[0]}</small><b style="color:${k[3]}">${k[1]}</b><span>${k[2]}</span></div>`).join('');
+
+  Chart.defaults.color=cv('--muted');Chart.defaults.borderColor=cv('--grid');Chart.defaults.font.family='Prompt';
+  const acc=cv('--acc'),good=cv('--good'),warn=cv('--warn'),bad=cv('--bad'),mut=cv('--muted'),a2=cv('--acc2');
+  const ty=Object.entries(cnt(a,x=>x.type)).sort((x,y)=>y[1]-x[1]);
+  mk('cType','bar',{labels:ty.map(x=>x[0]),datasets:[{data:ty.map(x=>x[1]),backgroundColor:acc,borderRadius:6}]},{indexAxis:'y'});
+  const hr=[...Array(24).keys()];
+  mk('cHour','bar',{labels:hr.map(h=>p2(h)),datasets:[
+    {label:'TRUE',data:hr.map(h=>a.filter(x=>x.flag&&parseInt(x.time)===h).length),backgroundColor:bad},
+    {label:'FALSE',data:hr.map(h=>a.filter(x=>!x.flag&&parseInt(x.time)===h).length),backgroundColor:mut}]},
+    {scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true}},plugins:{legend:{display:true,labels:{boxWidth:10}}}});
+  const stk=(keys,f)=>({labels:keys,datasets:[
+    {label:'ตรวจแล้ว',data:keys.map(k=>a.filter(x=>f(x)===k&&x.checked).length),backgroundColor:good},
+    {label:'ยังไม่ตรวจ',data:keys.map(k=>a.filter(x=>f(x)===k&&!x.checked).length),backgroundColor:warn}]});
+  const st={scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true}}};
+  mk('cShift','bar',stk(['Day','Night'],x=>x.shift),st);
+  const dk=Object.keys(cnt(a,x=>x.dept)).sort();
+  mk('cDept','bar',stk(dk,x=>x.dept),st);
+  const days=Object.keys(cnt(a,x=>x.date)).sort();
+  mk('cTrend','line',{labels:days.map(thDate),datasets:[
+    {label:'ทั้งหมด',data:days.map(d=>a.filter(x=>x.date===d).length),borderColor:acc,backgroundColor:acc,tension:.3},
+    {label:'TRUE',data:days.map(d=>a.filter(x=>x.date===d&&x.flag).length),borderColor:bad,backgroundColor:bad,tension:.3},
+    {label:'ยังไม่ตรวจ',data:days.map(d=>a.filter(x=>x.date===d&&!x.checked).length),borderColor:a2,backgroundColor:a2,tension:.3}]});
+
+  const I=[];
+  if(n){
+    if(ty[0])I.push([acc,`เรื่องที่เตือนบ่อยที่สุดคือ “${ty[0][0]}” ${ty[0][1]} ครั้ง (${pc(ty[0][1])})`]);
+    I.push([a2,`กะ Night มี ${N} รายการ (${pc(N)}) และกะ Day ${n-N} รายการ`]);
+    const du=Object.entries(cnt(a.filter(x=>!x.checked),x=>x.dept)).sort((x,y)=>y[1]-x[1])[0];
+    if(du)I.push([warn,`หน่วยงานที่ค้างตรวจมากที่สุดคือ ${du[0]} (${du[1]} รายการ)`]);
+    const od=a.filter(x=>!x.checked&&x.flag).length;
+    I.push([bad,`แจ้งเตือน TRUE ที่ยังไม่ตรวจ ${od} รายการ ควรตรวจก่อน`]);
+    const hh=hr.map(h=>[h,a.filter(x=>parseInt(x.time)===h).length]).sort((x,y)=>y[1]-x[1])[0];
+    I.push([good,`ช่วงเวลาที่มีแจ้งเตือนสูงสุดคือ ${p2(hh[0])}:00–${p2(hh[0])}:59 (${hh[1]} รายการ)`]);
+  }
+  $('#ins').innerHTML=I.map(i=>`<div class="ins"><i style="background:${i[0]}"></i><div>${esc(i[1])}</div></div>`).join('')||'<div class="ins">ไม่มีข้อมูล</div>';
+
+  const L=[...a].sort((x,y)=>(y.date+y.time).localeCompare(x.date+x.time)),V=L.slice(0,60);
+  $('#tb').innerHTML=V.map(x=>`<tr><td><b>${esc(x.plate)}</b></td><td>${esc(x.dept)}</td><td>${esc(x.type)}</td><td>${esc(x.time)}</td><td>${thDate(x.date)}</td>
+   <td><span class="tag ${x.flag?'t-t':'t-f'}">${x.flag?'TRUE':'FALSE'}</span></td>
+   <td><button class="tag ${x.checked?'t-ok':'t-no'}" data-id="${x.id}" title="กดเพื่อเปลี่ยนสถานะ">${x.checked?'ตรวจแล้ว':'ยังไม่ตรวจ'}</button></td>
+   <td><span class="tag ${x.shift==='Day'?'t-d':'t-n'}">${x.shift}</span></td></tr>`).join('');
+  $('#more').textContent=L.length>60?`แสดง 60 รายการล่าสุดจาก ${L.length} รายการ`:'';
+}
+
+/* import */
+const norm=s=>String(s??'').toLowerCase().replace(/[_\-\s]+/g,' ').trim();
+const SYN={plate:['ทะเบียนรถ','ทะเบียน','plate','license plate','vehicle'],dept:['หน่วยงาน','แผนก','department','unit'],type:['เรื่องที่เตือน','เรื่อง','alert','alert type','event'],time:['เวลา','time'],date:['วันที่','date'],flag:['true/false','true false','flag','ผล'],stat:['การตรวจสอบ','ตรวจสอบ','สถานะ','status','checked'],shift:['กะทำงาน','กะ','shift']};
+function normDate(v){
+  if(v instanceof Date)return iso(v);
+  if(typeof v==='number')return new Date(Math.round((v-25569)*864e5)).toISOString().slice(0,10);
+  let m=String(v).match(/(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return m[1]+'-'+p2(m[2])+'-'+p2(m[3]);
+  m=String(v).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(m){let y=+m[3];if(y>2400)y-=543;return y+'-'+p2(m[2])+'-'+p2(m[1])}
+  return '';
+}
+function normTime(v){
+  if(v instanceof Date)return p2(v.getHours())+':'+p2(v.getMinutes());
+  if(typeof v==='number'&&v<1){const t=Math.round(v*1440);return p2(Math.floor(t/60)%24)+':'+p2(t%60)}
+  const m=String(v).match(/(\d{1,2})[:.](\d{2})/);return m?p2(m[1])+':'+m[2]:'';
+}
+function handle(f){
+  if(!f)return;
+  const rd=new FileReader();
+  rd.onload=e=>{try{
+    const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+    const js=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:true});
+    if(!js.length)throw new Error('ไฟล์ไม่มีข้อมูล');
+    const hs=Object.keys(js[0]),col={};
+    for(const k in SYN)col[k]=hs.find(h=>SYN[k].includes(norm(h)))||hs.find(h=>SYN[k].some(s=>norm(h).includes(s)));
+    if(!col.plate)throw new Error('ไม่พบคอลัมน์ ทะเบียนรถ');
+    const out=[];
+    js.forEach(o=>{
+      const plate=String(o[col.plate]).trim();if(!plate)return;
+      const dv=col.date?o[col.date]:'';
+      const time=normTime(col.time?o[col.time]:dv)||'00:00';
+      const date=normDate(dv);if(!date)return;
+      const fl=col.flag?String(o[col.flag]).trim().toUpperCase():'';
+      const stt=col.stat?String(o[col.stat]).toLowerCase():'';
+      const sh=col.shift?String(o[col.shift]).toLowerCase():'';
+      out.push({plate,dept:String(o[col.dept]||'ไม่ระบุ').trim(),type:String(o[col.type]||'ไม่ระบุ').trim(),time,date,
+        flag:fl==='TRUE'||fl==='1'||fl==='จริง'||o[col.flag]===true,
+        checked:!/ยังไม่|ไม่ได้|unchecked|false|^no$|^0$/.test(stt)&&/ตรวจแล้ว|checked|true|yes|done|^1$/.test(stt),
+        shift:/night|ดึก|กลางคืน|^n$/.test(sh)?'Night':/day|เช้า|กลางวัน|^d$/.test(sh)?'Day':''});
+    });
+    if(!out.length)throw new Error('ไม่พบแถวที่ใช้ได้ (ต้องมีทะเบียนรถและวันที่)');
+    rows=out;load(f.name);toast('นำเข้า '+out.length+' รายการแล้ว');
+  }catch(err){toast('นำเข้าไม่สำเร็จ: '+err.message)}};
+  rd.readAsArrayBuffer(f);
+}
+function exportCsv(){
+  const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
+  const h=['ทะเบียนรถ','หน่วยงาน','เรื่องที่เตือน','เวลา','วันที่','TRUE/FALSE','การตรวจสอบ','กะทำงาน'];
+  const b=filt().map(x=>[x.plate,x.dept,x.type,x.time,x.date,x.flag?'TRUE':'FALSE',x.checked?'ตรวจแล้ว':'ยังไม่ตรวจ',x.shift].map(q).join(','));
+  const url=URL.createObjectURL(new Blob(['\ufeff'+[h.map(q).join(','),...b].join('\r\n')],{type:'text/csv;charset=utf-8'}));
+  const a=document.createElement('a');a.href=url;a.download='vehicle-alerts.csv';a.click();URL.revokeObjectURL(url);
+}
+
+/* presentation */
+const PR={open:false,i:0,timer:null,slides:[]};
+const cl=(src,dst)=>{const c=charts[src].config;mk(dst,c.type,JSON.parse(JSON.stringify(c.data)),JSON.parse(JSON.stringify(c.options)))};
+const killP=()=>Object.keys(charts).filter(k=>/^pc\d/.test(k)).forEach(k=>{charts[k].destroy();delete charts[k]});
+function slides(){
+  const ch=(t,ids)=>({h:`<div class="sl"><h3>${t}</h3><div class="${ids.length>1?'two':''}">${ids.map((_,i)=>`<div class="glass"><div class="pcv"><canvas id="pc${i}"></canvas></div></div>`).join('')}</div></div>`,c:ids});
+  return [
+    {h:`<div class="sl"><h2 class="hero-title" style="font-size:clamp(2.2rem,7vw,5rem)">การแจ้งเตือนจากระบบรถ</h2><p class="sub" style="font-size:1.1rem">${esc($('#hero').textContent)}</p><p class="sub">${esc($('#src').textContent)}</p></div>`},
+    {h:`<div class="sl"><h3>ภาพรวม</h3><div class="kpis">${$('#kpis').innerHTML}</div></div>`},
+    ch('เรื่องที่เตือนบ่อยที่สุด',['cType']),
+    ch('จำนวนแจ้งเตือนรายชั่วโมง (TRUE/FALSE)',['cHour']),
+    ch('กะทำงานและหน่วยงาน × สถานะการตรวจ',['cShift','cDept']),
+    ch('แนวโน้มรายวัน',['cTrend']),
+    {h:`<div class="sl"><h3>ข้อสังเกตอัตโนมัติ</h3>${$('#ins').innerHTML}</div>`}
+  ];
+}
+function show(i){
+  const n=PR.slides.length;i=Math.max(0,Math.min(n-1,i));PR.i=i;killP();
+  const s=PR.slides[i];$('#stage').innerHTML=s.h;
+  if(s.c)requestAnimationFrame(()=>s.c.forEach((id,j)=>cl(id,'pc'+j)));
+  $('#pcount').textContent=(i+1)+' / '+n;$('#pbar').style.width=((i+1)/n*100)+'%';
+  $('#pdots').innerHTML=PR.slides.map((_,j)=>`<button class="pdot${j===i?' on':''}" data-go="${j}" aria-label="สไลด์ ${j+1}"></button>`).join('');
+}
+function openP(){
+  if(!rows.length)return toast('ยังไม่มีข้อมูล');
+  PR.slides=slides();PR.open=true;$('#pres').hidden=false;document.body.style.overflow='hidden';Chart.defaults.font.size=16;
+  try{const d=document.documentElement;if(!document.fullscreenElement&&d.requestFullscreen)d.requestFullscreen().catch(()=>{})}catch(e){}
+  show(0);
+}
+function closeP(){
+  PR.open=false;stopA();killP();$('#pres').hidden=true;document.body.style.overflow='';Chart.defaults.font.size=12;
+  if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+  render();
+}
+function stopA(){clearInterval(PR.timer);PR.timer=null;$('#pPlay').textContent='เล่นอัตโนมัติ'}
+function autoP(){
+  if(PR.timer)return stopA();
+  PR.timer=setInterval(()=>{PR.i>=PR.slides.length-1?stopA():show(PR.i+1)},9000);
+  $('#pPlay').textContent='หยุดเล่น';toast('เล่นอัตโนมัติทุก 9 วินาที');
+}
+$('#bPres').onclick=openP;$('#pClose').onclick=closeP;
+$('#pNext').onclick=()=>show(PR.i+1);$('#pPrev').onclick=()=>show(PR.i-1);$('#pPlay').onclick=autoP;
+$('#pFull').onclick=()=>{const d=document.documentElement;if(document.fullscreenElement)document.exitFullscreen();else if(d.requestFullscreen)d.requestFullscreen()};
+$('#pdots').onclick=e=>{const b=e.target.closest('[data-go]');if(b)show(+b.dataset.go)};
+document.addEventListener('keydown',e=>{
+  if(!PR.open)return;const k=e.key;
+  if(['ArrowRight','PageDown',' ','Enter'].includes(k)){e.preventDefault();show(PR.i+1)}
+  else if(['ArrowLeft','PageUp','Backspace'].includes(k)){e.preventDefault();show(PR.i-1)}
+  else if(k==='Home')show(0);else if(k==='End')show(PR.slides.length-1);
+  else if(k==='Escape')closeP();else if(k==='f'||k==='F')$('#pFull').click();else if(k==='p'||k==='P')autoP();
+});
+let tx=null;const pr=$('#pres');
+pr.addEventListener('touchstart',e=>{tx=e.touches[0].clientX},{passive:true});
+pr.addEventListener('touchend',e=>{if(tx==null)return;const d=e.changedTouches[0].clientX-tx;if(Math.abs(d)>50)show(PR.i+(d<0?1:-1));tx=null});
+
+/* events */
+$('#bImp').onclick=()=>$('#file').click();
+$('#file').onchange=e=>{handle(e.target.files[0]);e.target.value=''};
+$('#bSam').onclick=()=>{sample();toast('โหลดข้อมูลตัวอย่างแล้ว')};
+$('#bCsv').onclick=exportCsv;
+function setTheme(n,save){
+  document.documentElement.dataset.theme=n;
+  document.querySelectorAll('[data-theme-set]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.themeSet===n));
+  if(save){try{localStorage.setItem('va-theme',n)}catch(e){}}
+  if(rows.length)render();
+}
+document.querySelectorAll('[data-theme-set]').forEach(b=>b.onclick=()=>setTheme(b.dataset.themeSet,true));
+$('#bReset').onclick=()=>{F={};['fDept','fShift','fFlag','fStat','fQ'].forEach(i=>$('#'+i).value='');render()};
+[['fDept','dept'],['fShift','shift'],['fFlag','flag'],['fStat','stat']].forEach(([i,k])=>$('#'+i).onchange=e=>{F[k]=e.target.value;render()});
+$('#fQ').oninput=e=>{F.q=e.target.value.trim().toLowerCase();render()};
+$('#tb').onclick=e=>{const b=e.target.closest('[data-id]');if(!b)return;const x=rows[+b.dataset.id];x.checked=!x.checked;render()};
+let t0='dark';try{const t=localStorage.getItem('va-theme');if(t==='light'||t==='dark')t0=t}catch(e){}
+setTheme(t0,false);
+sample();
+</script>
+</body>
+</html>
