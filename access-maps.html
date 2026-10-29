@@ -78,7 +78,7 @@ button,input,select{font:inherit}button{cursor:pointer}.app{height:100vh;min-hei
 <script>
 (() => {
 'use strict';
-const API_URL = 'https://script.google.com/macros/s/AKfycbxGxDaEkB1IVbzSbMFkMJ08zfx9n9qIRDReGx9Mb-bg2n5C0jh8KuiwDnGjdjTvuVCF/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzCB23vC133nGr1Ek1-IGboh_ZfMRZKyuBOCZeIN0Fvduax3XIV7rCl2NX8NXzpdU8c/exec';
 const $ = id => document.getElementById(id);
 let points = [], selected = null, elevationOn = false, satelliteOn = false;
 
@@ -120,7 +120,7 @@ function normalizeRows(data){
     : (data && Array.isArray(data.records)) ? data.records
     : (data && Array.isArray(data.results)) ? data.results : [];
   return rows.map((r,i)=>{
-    const name = String(getField(r,'ชื่อ Geofence') || `จุดที่ ${i+1}`);
+    const name = String(getField(r,'Geofence') || getField(r,'ชื่อ Geofence') || `จุดที่ ${i+1}`);
     const lat = Number(getField(r,'Latitude'));
     const lon = Number(getField(r,'Longitude'));
     return {id:String(i+1), name, lat, lon, raw:r};
@@ -131,12 +131,13 @@ async function loadData(){
   $('refreshBtn').innerHTML='<span class="loading"></span> โหลด...';
   setApiStatus(false,'กำลังเชื่อมต่อข้อมูล...');
   try{
-    const res = await fetch(API_URL,{method:'GET',cache:'no-store'});
+    const ctrl = new AbortController(); const tm = setTimeout(()=>ctrl.abort(),30000);
+    const res = await fetch(API_URL,{method:'GET',cache:'no-store',signal:ctrl.signal}).finally(()=>clearTimeout(tm));
     if(!res.ok) throw new Error('HTTP '+res.status);
     const text = await res.text();
     let data;
     try{ data = JSON.parse(text); }
-    catch(e){ throw new Error('API ไม่ได้ส่ง JSON กลับมา (อาจเป็นหน้า login ให้ตั้ง Who has access = Anyone)'); }
+    catch(e){ console.log(text.slice(0,300)); throw new Error('API ไม่ได้ส่ง JSON กลับมา (อาจเป็นหน้า login ให้ตั้ง Who has access = Anyone)'); }
     console.log('API data:', data);
     points = normalizeRows(data);
     if(!points.length) throw new Error('เชื่อมต่อสำเร็จ แต่ไม่พบข้อมูลพิกัด Latitude/Longitude ที่ถูกต้อง (ต้องไม่เป็น 0)');
