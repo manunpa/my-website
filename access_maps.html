@@ -6,6 +6,9 @@
 <title>Access Maps | Location Intelligence</title>
 <link rel="preconnect" href="https://unpkg.com">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<!-- เพิ่ม CSS สำหรับ Marker Cluster -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <style>
 :root{--bg:#f3f6fb;--panel:#fff;--panel2:#f7f9fc;--text:#182235;--muted:#718096;--line:#e5eaf2;--accent:#4868f5;--accent2:#8b5cf6;--shadow:0 12px 35px #26365a12;--mapfilter:none}
@@ -73,6 +76,8 @@ button,input,select{font:inherit}button{cursor:pointer}.app{height:100vh;min-hei
 </div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- เพิ่ม JS สำหรับ Marker Cluster -->
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 <script>
 (() => {
 'use strict';
@@ -81,6 +86,16 @@ const $ = id => document.getElementById(id);
 let points = [], markers = [], selected = null, trafficOn = false, elevationOn = false, satelliteOn = false;
 const map = L.map('map', {zoomControl:false}).setView([13.7563,100.5018],6);
 L.control.zoom({position:'bottomright'}).addTo(map);
+
+// สร้าง Marker Cluster Group สำหรับรวมกลุ่มหมุดเวลาซูมออก
+const markerClusterGroup = L.markerClusterGroup({
+  maxClusterRadius: 50,
+  spiderfyOnMaxZoom: true,
+  showCoverageOnHover: false,
+  zoomToBoundsOnClick: true
+});
+map.addLayer(markerClusterGroup);
+
 const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});
 const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'});
 const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap © CARTO'});
@@ -94,7 +109,8 @@ function normalizeRows(data){
  return rows.map((r,i)=>{
   const lat=Number(val(r,['latitude','Latitude','LATITUDE','lat','Lat','LAT','ละติจูด','Latitude (Y)']));
   const lon=Number(val(r,['longitude','Longitude','LONGITUDE','lng','Lng','lon','Lon','LONG','ลองจิจูด','Longitude (X)']));
-  const name=String(val(r,['name','Name','ชื่อ','ชื่อจุด','location','Location','สถานที่','site','Site','device','Device','ทะเบียนรถ','รหัส'])||`จุดที่ ${i+1}`);
+  // ดึงค่าจากคอลัมน์ "ชื่อ Geofence" หรือฟิลด์ชื่ออื่นๆ เป็นลำดับแรก
+  const name=String(val(r,['ชื่อ Geofence','Geofence','name','Name','ชื่อ','ชื่อจุด','location','Location','สถานที่','site','Site','device','Device','ทะเบียนรถ','รหัส'])||`จุดที่ ${i+1}`);
   return {id:String(val(r,['id','ID','รหัส'])||i+1),name,lat,lon,raw:r};
  }).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon)&&Math.abs(p.lat)<=90&&Math.abs(p.lon)<=180);
 }
@@ -112,14 +128,18 @@ async function loadData(){
   toast('ไม่สามารถอ่านข้อมูล API ได้ โปรดตรวจสอบการเผยแพร่ Web App');
  }finally{$('refreshBtn').innerHTML='<i class="fa-solid fa-rotate"></i> รีเฟรช'}
 }
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&','<':'<','>':'>','"':'"',"'":'''}[c]))}
 function markerIcon(active){return L.divIcon({className:'custom-pin',html:`<div style="width:${active?34:29}px;height:${active?34:29}px;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);background:${active?'linear-gradient(135deg,#536dfe,#9c4dff)':'linear-gradient(135deg,#2674e8,#18b7a4)'};border:3px solid white;box-shadow:0 4px 12px #172b4d55;display:grid;place-items:center"><span style="transform:rotate(45deg);color:white;font-size:${active?13:11}px"><i class="fa-solid fa-location-dot"></i></span></div>`,iconSize:[34,34],iconAnchor:[17,31],popupAnchor:[0,-28]})}
 function renderPoints(){
- markers.forEach(m=>map.removeLayer(m));markers=[];$('pointCount').textContent=points.length+' จุด';
+ markerClusterGroup.clearLayers();
+ markers=[];$('pointCount').textContent=points.length+' จุด';
  points.forEach(p=>{
-  const m=L.marker([p.lat,p.lon],{icon:markerIcon(false)}).addTo(map);
+  const m=L.marker([p.lat,p.lon],{icon:markerIcon(false)});
   m.bindPopup(`<b>${escapeHtml(p.name)}</b><br><small>${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}</small>`);
-  m.on('click',()=>selectPoint(p.id));p.marker=m;markers.push(m);
+  m.on('click',()=>selectPoint(p.id));
+  p.marker=m;
+  markers.push(m);
+  markerClusterGroup.addLayer(m);
  });
  renderList();if(points.length)fitPoints(false);
 }
@@ -132,13 +152,23 @@ function renderList(){
 }
 function selectPoint(id){
  const p=points.find(x=>x.id===id);if(!p)return;selected=p;
- map.flyTo([p.lat,p.lon],Math.max(map.getZoom(),14),{duration:.65});if(p.marker){p.marker.setIcon(markerIcon(true));p.marker.openPopup()}
+ 
+ // ถ้ารวมกลุ่มอยู่ใน Cluster ให้ซูมเปิดกลุ่มออกมาก่อน
+ if (markerClusterGroup.hasLayer(p.marker)) {
+   map.flyTo([p.lat,p.lon],Math.max(map.getZoom(),14),{duration:.65});
+ } else {
+   markerClusterGroup.zoomToShowLayer(p.marker, () => {
+     map.flyTo([p.lat,p.lon],Math.max(map.getZoom(),14),{duration:.65});
+   });
+ }
+
+ if(p.marker){p.marker.setIcon(markerIcon(true));p.marker.openPopup()}
  points.filter(x=>x!==p).forEach(x=>x.marker&&x.marker.setIcon(markerIcon(false)));
  $('selectedName').textContent=p.name;$('selectedCoords').textContent=`${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}`;renderList();
 }
 function fitPoints(showToast=true){
  if(!points.length){toast('ยังไม่มีพิกัดให้แสดง');return}
- if(points.length===1)map.setView([points[0].lat,points[0].lon],14);else map.fitBounds(L.latLngBounds(points.map(p=>[p.lat,p.lon])).pad(.16));
+ if(points.length===1)map.setView([points[0].lat,points[0].lon],14);else map.fitBounds(markerClusterGroup.getBounds().pad(.16));
  if(showToast)toast(`แสดงพิกัดทั้งหมด ${points.length} จุด`);
 }
 function setBase(layer,button){
@@ -181,7 +211,6 @@ $('elevationBtn').addEventListener('click',async()=>{
 });
 $('logoutBtn').addEventListener('click',()=>{if(confirm('ต้องการออกจาก Access Maps หรือไม่?')){selected=null;$('selectedName').textContent='ออกจากระบบแล้ว';$('selectedCoords').textContent='ปิดหน้าต่างนี้ได้เมื่อใช้งานเสร็จ';toast('ออกจากมุมมอง Access Maps แล้ว')}});
 
-// URL parameters can be used to preselect a provider: ?provider=google
 const initialProvider=new URLSearchParams(location.search).get('provider');if(['osm','google','here','apple'].includes(initialProvider))$('providerSelect').value=initialProvider;
 loadData();
 })();
