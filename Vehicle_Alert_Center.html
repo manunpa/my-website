@@ -354,11 +354,11 @@ $('#bReset').onclick=()=>{F={};['fDept','fShift','fFlag','fStat','fQ'].forEach(i
 [['fDept','dept'],['fShift','shift'],['fFlag','flag'],['fStat','stat']].forEach(([i,k])=>$('#'+i).onchange=e=>{F[k]=e.target.value;render()});
 $('#fQ').oninput=e=>{F.q=e.target.value.trim().toLowerCase();render()};
 $('#tb').onclick=e=>{const b=e.target.closest('[data-id]');if(!b)return;const x=rows[+b.dataset.id];x.checked=!x.checked;render()};
-// ฟังก์ชันสำหรับโหลดไฟล์ vehicle-alerts.csv จากโฟลเดอร์ data อัตโนมัติ
+// ฟังก์ชันสำหรับโหลดไฟล์ vehicle-alerts.xlsx จากโฟลเดอร์ data อัตโนมัติ
 function loadDefaultCsv(){
-  fetch('data/vehicle-alerts.csv')
+  fetch('data/vehicle-alerts.xlsx')
     .then(response => {
-      if (!response.ok) throw new Error('ไม่พบไฟล์ data/vehicle-alerts.csv');
+      if (!response.ok) throw new Error('ไม่พบไฟล์ data/vehicle-alerts.xlsx');
       return response.arrayBuffer();
     })
     .then(buffer => {
@@ -390,19 +390,19 @@ function loadDefaultCsv(){
       });
       if (!out.length) throw new Error('ไม่พบแถวที่ใช้ได้');
       rows = out; 
-      load('vehicle-alerts.csv'); 
-      toast('โหลดข้อมูลจาก data/vehicle-alerts.csv สำเร็จ');
+      load('vehicle-alerts.xlsx'); 
+      toast('โหลดข้อมูลจาก data/vehicle-alerts.xlsx สำเร็จ');
     })
     .catch(err => {
       console.warn(err.message);
       sample();
-      toast('ใช้ข้อมูลตัวอย่าง (ไม่พบไฟล์ CSV ในโฟลเดอร์ data)');
+      toast('ใช้ข้อมูลตัวอย่าง (ไม่พบไฟล์ Excel ในโฟลเดอร์ data)');
     });
 }
 
 let t0='dark';try{const t=localStorage.getItem('va-theme');if(t==='light'||t==='dark')t0=t}catch(e){}
 setTheme(t0,false);
-loadDefaultCsv(); // <--- นำมาวางแทนที่ตรงจุดนี้
+loadDefaultCsv();
 </script>
 </body>
 </html>
