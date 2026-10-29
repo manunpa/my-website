@@ -3,247 +3,286 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Access Maps | Location Intelligence</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<title>Access Maps | Geofence Monitor</title>
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f3f6fb;--panel:#fff;--panel2:#f7f9fc;--text:#182235;--muted:#718096;--line:#e5eaf2;--accent:#4868f5;--accent2:#8b5cf6;--shadow:0 12px 35px #26365a12}
-*{box-sizing:border-box}body{margin:0;font-family:Inter,"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--text);transition:background .25s,color .25s}
-body.dark{--bg:#0d1422;--panel:#151f30;--panel2:#101a2a;--text:#edf3ff;--muted:#93a2ba;--line:#26344a;--accent:#7b91ff;--accent2:#c084fc;--shadow:0 12px 35px #0003}
-button,input,select{font:inherit}button{cursor:pointer}.app{height:100vh;min-height:580px;display:flex;flex-direction:column;overflow:hidden}
-.topbar{height:76px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:var(--panel);border-bottom:1px solid var(--line);z-index:1000;gap:16px}
-.brand-wrap{display:flex;align-items:center;gap:13px;min-width:0}.brand-icon{width:43px;height:43px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#4f70ff,#a855f7);color:white;font-size:19px;box-shadow:0 7px 20px #6478ff55}
-.brand{font-weight:900;font-size:28px;letter-spacing:-1px;white-space:nowrap;background:linear-gradient(90deg,#3d6df5,#9a4de8,#14b8a6,#3d6df5);background-size:300% 100%;color:transparent;background-clip:text;-webkit-background-clip:text;animation:flow 6s linear infinite}
-@keyframes flow{to{background-position:300% 0}}.subtitle{font-size:11px;color:var(--muted);letter-spacing:2px;margin-top:1px;font-weight:700}
-.top-actions{display:flex;align-items:center;gap:9px}.icon-btn,.outline-btn{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:12px;height:40px;padding:0 13px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:.2s}.icon-btn{width:40px;padding:0}.icon-btn:hover,.outline-btn:hover{border-color:var(--accent);transform:translateY(-1px)}.logout{color:#e04f66}.status-pill{display:flex;align-items:center;gap:7px;background:var(--panel2);border:1px solid var(--line);padding:9px 12px;border-radius:99px;font-size:12px;color:var(--muted)}.dot{width:7px;height:7px;background:#f0ad4e;border-radius:50%}.dot.online{background:#22c55e;box-shadow:0 0 0 4px #22c55e33}.dot.error{background:#ef4444}
-.workspace{flex:1;min-height:0;display:flex;position:relative}.sidebar{width:310px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;transition:width .25s,transform .25s;z-index:800;overflow:hidden}.sidebar.collapsed{width:0;border-right:0}.side-head{padding:20px 17px 13px}.side-title{display:flex;align-items:center;justify-content:space-between;font-weight:800;font-size:15px}.count{font-size:11px;color:var(--accent);background:#536df51a;border-radius:8px;padding:5px 8px}.search{position:relative;margin-top:16px}.search i{position:absolute;left:12px;top:12px;color:var(--muted);font-size:13px}.search input{width:100%;border:1px solid var(--line);border-radius:11px;padding:10px 12px 10px 34px;background:var(--panel2);color:var(--text);outline:none;font-size:12px}.search input:focus{border-color:var(--accent)}.list-tools{display:flex;align-items:center;justify-content:space-between;padding:2px 18px 10px;color:var(--muted);font-size:11px}.point-list{overflow-y:auto;padding:0 10px 16px;flex:1}.point{display:flex;gap:11px;padding:12px 10px;border:1px solid transparent;border-radius:13px;cursor:pointer;margin-bottom:5px;transition:.18s}.point:hover{background:var(--panel2)}.point.active{background:#536df511;border-color:#657cf344}.pin{width:36px;height:36px;flex-shrink:0;border-radius:11px;background:#536df51b;color:var(--accent);display:grid;place-items:center}.point-main{min-width:0;flex:1}.point-name{font-size:12px;font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.point-coords{font-size:10px;color:var(--muted);margin-top:5px;font-variant-numeric:tabular-nums}.point-meta{font-size:10px;color:#22a06b;margin-top:5px}.empty{padding:30px 14px;text-align:center;color:var(--muted);font-size:12px;line-height:1.8}
-.main{flex:1;min-width:0;position:relative;display:flex;flex-direction:column}.toolbar{position:absolute;left:16px;right:16px;top:16px;z-index:700;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;pointer-events:none}.toolbar-group{pointer-events:auto;display:flex;gap:7px;flex-wrap:wrap}.tool{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:11px;padding:10px 12px;box-shadow:var(--shadow);font-size:11px;font-weight:700;display:flex;align-items:center;gap:8px;white-space:nowrap}.tool:hover,.tool.selected{border-color:var(--accent);color:var(--accent)}.tool select{border:0;outline:0;background:transparent;color:inherit;max-width:130px;font-size:11px;font-weight:700}.tool option{color:#182235}.map-wrap{flex:1;min-height:0;position:relative}#map{height:100%;width:100%;background:#dce5ef}.map-footer{position:absolute;bottom:17px;left:17px;right:17px;display:flex;justify-content:space-between;align-items:flex-end;z-index:600;pointer-events:none;gap:12px}.map-card{pointer-events:auto;background:var(--panel);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow);padding:11px 14px;font-size:11px}.map-card strong{font-size:12px;display:block;margin-bottom:4px}.map-card span{color:var(--muted)}.coords-card{font-variant-numeric:tabular-nums}.legend{display:flex;gap:12px;align-items:center;color:var(--muted);font-size:10px}.legend i{color:var(--accent);margin-right:4px}.toast{position:absolute;top:78px;left:50%;transform:translateX(-50%);z-index:1200;background:var(--text);color:var(--panel);border-radius:10px;padding:10px 15px;font-size:12px;box-shadow:var(--shadow);display:none;max-width:90%;text-align:center}.toast.show{display:block}.loading{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--panel);color:var(--text)}.leaflet-control-zoom a{background:var(--panel)!important;color:var(--text)!important;border-color:var(--line)!important}.leaflet-control-attribution{font-size:9px!important}
-@media(max-width:850px){.topbar{padding:0 13px;height:68px}.brand{font-size:23px}.subtitle{font-size:9px;letter-spacing:1px}.status-pill{display:none}.sidebar{position:absolute;left:0;0;bottom:0;width:min(310px,86vw);box-shadow:var(--shadow)}.sidebar.collapsed{width:0}.toolbar{left:10px;right:10px;top:10px}.toolbar-group{gap:5px}.tool{padding:9px;font-size:10px}.tool .tool-label{display:none}.tool select{max-width:105px}.map-footer{left:10px;right:10px;bottom:10px}.map-card{padding:9px 11px}.legend{display:none}.top-actions{gap:6px}.logout span{display:none}.outline-btn{width:40px;padding:0}.app{min-height:500px}}
-@media(max-width:480px){.brand-icon{width:36px;height:36px}.brand{font-size:21px}.toolbar{flex-direction:column}.toolbar-group{max-width:100%}.tool{padding:8px}.map-footer .map-card:first-child{max-width:65%}}
+:root{--bg:#f4f7fb;--panel:#fff;--panel2:#f8fafc;--text:#182230;--muted:#718096;--border:#e5eaf1;--accent:#4776ff;--accent2:#8b5cf6;--shadow:0 8px 28px #1d355710;--top:#ffffffeb;--map-filter:none}
+body.dark{--bg:#0b1220;--panel:#111b2b;--panel2:#162235;--text:#e8eef8;--muted:#91a0b8;--border:#26354a;--accent:#6d91ff;--accent2:#b08cff;--shadow:0 8px 28px #0004;--top:#111b2beF}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:Inter,Kanit,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+button,input{font:inherit}button{cursor:pointer}
+.app{height:100dvh;display:flex;flex-direction:column}
+.topbar{height:78px;flex:0 0 78px;background:var(--top);backdrop-filter:blur(18px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:22px;padding:0 24px;z-index:1000}
+.brand{display:flex;align-items:center;gap:13px;min-width:255px}
+.brandmark{width:43px;height:43px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#4776ff,#9b5cff);box-shadow:0 7px 18px #4776ff40;color:white;font-size:23px}
+.brand h1{margin:0;font-size:25px;line-height:1;font-weight:800;letter-spacing:-1px;background:linear-gradient(90deg,#4776ff,#8d5cf6,#16c7bd,#4776ff);background-size:260% auto;color:transparent;background-clip:text;-webkit-background-clip:text;animation:shine 5s linear infinite}
+@keyframes shine{to{background-position:260% center}}
+.brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:2.1px;margin-top:6px;font-weight:700}
+.top-status{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;margin-left:auto;white-space:nowrap}
+.live-dot{width:8px;height:8px;background:#20c997;border-radius:50%;box-shadow:0 0 0 4px #20c99720}
+.actions{display:flex;align-items:center;gap:9px}
+.iconbtn,.mapbtn{border:1px solid var(--border);color:var(--text);background:var(--panel);height:39px;min-width:39px;padding:0 12px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:.2s;font-weight:600;font-size:12px}
+.iconbtn:hover,.mapbtn:hover{border-color:var(--accent);transform:translateY(-1px)}
+.logout{color:#e05260}
+.main{display:flex;flex:1;min-height:0;position:relative}
+.sidebar{width:325px;min-width:325px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:500;transition:width .25s,min-width .25s,transform .25s;overflow:hidden}
+.sidebar.collapsed{width:0;min-width:0;border-right:0}
+.sidehead{padding:22px 18px 16px;border-bottom:1px solid var(--border);min-width:325px}
+.side-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:15px}
+.side-title h2{font-size:15px;margin:0;font-weight:700}
+.count{font-size:11px;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);padding:5px 9px;border-radius:8px;font-weight:700}
+.searchwrap{position:relative}
+.searchwrap span{position:absolute;left:12px;top:10px;color:var(--muted)}
+.searchwrap input{width:100%;height:39px;padding:0 12px 0 36px;border:1px solid var(--border);background:var(--panel2);border-radius:11px;color:var(--text);outline:none;font-size:12px}
+.searchwrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px #4776ff18}
+.filterline{display:flex;gap:7px;margin-top:11px}
+.chip{font-size:10px;color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 9px;background:transparent}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.pointlist{padding:8px;overflow:auto;flex:1;min-width:325px}
+.pointrow{display:flex;align-items:center;gap:11px;padding:12px 10px;border-radius:12px;cursor:pointer;border:1px solid transparent;transition:.15s}
+.pointrow:hover{background:var(--panel2);border-color:var(--border)}
+.pointrow.selected{background:color-mix(in srgb,var(--accent) 9%,var(--panel));border-color:color-mix(in srgb,var(--accent) 35%,transparent)}
+.pin{width:35px;height:35px;border-radius:11px;background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent);display:grid;place-items:center;flex-shrink:0;font-size:16px}
+.pointinfo{min-width:0;flex:1}
+.pointname{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pointcoord{font-size:10px;color:var(--muted);margin-top:5px;font-variant-numeric:tabular-nums}
+.pointarrow{color:var(--muted);font-size:17px}
+.sidefoot{border-top:1px solid var(--border);padding:13px 18px;min-width:325px;display:flex;justify-content:space-between;color:var(--muted);font-size:10px}
+.maparea{flex:1;min-width:0;position:relative;background:#dce5ed}
+#map{height:100%;width:100%;z-index:1}
+.mapcontrols{position:absolute;top:17px;left:17px;right:17px;display:flex;justify-content:space-between;align-items:flex-start;z-index:400;pointer-events:none;gap:10px}
+.mapcontrols>*{pointer-events:auto}
+.map-switcher{display:flex;gap:5px;background:var(--top);backdrop-filter:blur(14px);padding:5px;border:1px solid var(--border);border-radius:13px;box-shadow:var(--shadow)}
+.mapbtn{height:32px;border:0;background:transparent;min-width:auto;border-radius:9px;padding:0 12px;font-size:11px}
+.mapbtn.active{background:var(--accent);color:white}
+.mapright{display:flex;gap:8px}
+.floating-card{background:var(--top);backdrop-filter:blur(16px);border:1px solid var(--border);box-shadow:var(--shadow);border-radius:14px;padding:12px 15px}
+.statlabel{font-size:10px;color:var(--muted);font-weight:600}
+.statvalue{font-size:20px;font-weight:800;letter-spacing:-.5px;margin-top:3px}
+.statvalue em{font-style:normal;color:var(--accent)}
+.mapstats{display:flex;gap:8px}
+.mapstats .floating-card{min-width:104px}
+.mapbottom{position:absolute;bottom:20px;left:17px;right:17px;display:flex;justify-content:space-between;align-items:flex-end;z-index:400;pointer-events:none}
+.mapbottom>*{pointer-events:auto}
+.legend{display:flex;gap:15px;align-items:center;font-size:10px;color:var(--muted)}
+.legend .floating-card{display:flex;gap:13px;align-items:center;padding:11px 13px}
+.legend-item{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.legend-dot{width:8px;height:8px;border-radius:50%;background:#4776ff}
+.legend-dot.cluster{background:#8b5cf6}
+.coordinates{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.leaflet-container{font-family:Inter,Kanit,sans-serif}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--panel);color:var(--text)}
+.leaflet-popup-content{font-family:Inter,Kanit,sans-serif;font-size:12px}
+.popup-title{font-weight:700;margin-bottom:5px}
+.popup-coord{font-size:10px;color:var(--muted)}
+.marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background-color:#4776ff30}
+.marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background:linear-gradient(135deg,#4776ff,#8b5cf6);color:white;font-family:Inter,sans-serif;font-weight:800;box-shadow:0 3px 12px #4776ff40}
+.empty{padding:28px 15px;text-align:center;color:var(--muted);font-size:12px;line-height:1.7}
+.toast{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);z-index:1500;background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);padding:11px 16px;border-radius:11px;font-size:12px;display:none;max-width:90%;text-align:center}
+.toast.show{display:block}
+.loading{display:inline-block;width:13px;height:13px;border:2px solid #4776ff30;border-top-color:#4776ff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:7px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:850px){.topbar{padding:0 13px;height:68px;flex-basis:68px;gap:10px}.brand{min-width:0}.brandmark{width:38px;height:38px}.brand h1{font-size:21px}.brand small{font-size:8px}.top-status{display:none}.sidebar{position:absolute;top:0;bottom:0;left:0;box-shadow:var(--shadow);width:min(325px,86vw);min-width:min(325px,86vw)}.sidebar.collapsed{transform:translateX(-100%);width:min(325px,86vw);min-width:min(325px,86vw)}.sidehead,.pointlist,.sidefoot{min-width:0}.mapstats .floating-card{min-width:78px;padding:9px}.statvalue{font-size:16px}.mapstats .statlabel{font-size:9px}.mapcontrols{top:10px;left:10px;right:10px}.mapbottom{left:10px;right:10px;bottom:10px}.legend .floating-card{gap:8px}.coordinates{display:none}.mapbtn{padding:0 9px}.actions{gap:5px}.logout span{display:none}}
+@media(max-width:470px){.mapstats .floating-card:nth-child(2){display:none}.brand small{letter-spacing:1px}.brand{gap:8px}.actions .iconbtn{padding:0 9px}.map-switcher{gap:1px}.mapbtn{font-size:10px;padding:0 7px}.legend .floating-card{font-size:9px;gap:7px}.legend-item{gap:4px}}
 </style>
 </head>
 <body>
 <div class="app">
-<header class="topbar">
-  <div class="brand-wrap">
-    <button class="icon-btn" id="sidebarToggle" title="เปิด/ซ่อนรายชื่อ" aria-label="เปิด/ซ่อนรายชื่อ"><i class="fa-solid fa-bars"></i></button>
-    <div class="brand-icon"><i class="fa-solid fa-location-dot"></i></div>
-    <div><div class="brand">Access Maps</div><div class="subtitle">LOCATION INTELLIGENCE</div></div>
-  </div>
-  <div class="top-actions">
-    <div class="status-pill"><span class="dot" id="apiDot"></span><span id="apiStatus">กำลังเชื่อมต่อข้อมูล...</span></div>
-    <button class="icon-btn" id="themeToggle" title="เปลี่ยนธีม" aria-label="เปลี่ยนธีม"><i class="fa-solid fa-moon" id="themeIcon"></i></button>
-    <button class="outline-btn logout" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i><span>ออกจากระบบ</span></button>
-  </div>
-</header>
-<div class="workspace">
-  <aside class="sidebar" id="sidebar">
-    <div class="side-head"><div class="side-title"><span><i class="fa-solid fa-map-location-dot" style="color:var(--accent);margin-right:7px"></i>รายการพิกัด</span><span class="count" id="pointCount">0 จุด</span></div>
-      <div class="search"><i class="fa-solid fa-magnifying-glass"></i><input id="searchInput" type="search" placeholder="ค้นหาชื่อหรือพิกัด..."></div>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brandmark">⌖</div>
+      <div><h1>Access Maps</h1><small>GEOFENCE MONITORING</small></div>
     </div>
-    <div class="list-tools"><span id="listSummary">จุดทั้งหมด</span><button id="refreshBtn" style="border:0;background:none;color:var(--accent);font-size:11px;font-weight:700"><i class="fa-solid fa-rotate"></i> รีเฟรช</button></div>
-    <div class="point-list" id="pointList"><div class="empty"><span class="loading"></span><br>กำลังโหลดข้อมูลพิกัด...</div></div>
-  </aside>
+    <div class="top-status"><span class="live-dot"></span><span id="statusText">กำลังเชื่อมต่อข้อมูล...</span></div>
+    <div class="actions">
+      <button class="iconbtn" id="sidebarToggle" title="เปิด/ซ่อนรายการ">☰ <span style="font-size:11px">รายการ</span></button>
+      <button class="iconbtn" id="themeToggle" title="เปลี่ยนธีม"><span id="themeIcon">☾</span></button>
+      <button class="iconbtn" id="refreshBtn" title="โหลดข้อมูลใหม่">↻</button>
+      <button class="iconbtn logout" id="logoutBtn" title="ออกจากระบบ">⇥ <span style="font-size:11px">ออกจากระบบ</span></button>
+    </div>
+  </header>
   <main class="main">
-    <div class="toolbar">
-      <div class="toolbar-group">
-        <button class="tool" id="providerBtn" title="เปิดแผนที่ในผู้ให้บริการที่เลือก"><i class="fa-solid fa-map"></i><span class="tool-label">แผนที่</span>
-          <select id="providerSelect" aria-label="เลือกผู้ให้บริการแผนที่">
-            <option value="osm">OpenStreetMap</option><option value="google">Google Maps</option><option value="here">HERE Maps</option><option value="apple">Apple Maps</option>
-          </select>
-        </button>
-        <button class="tool selected" id="streetBtn"><i class="fa-solid fa-road"></i><span class="tool-label">ถนน</span></button>
-        <button class="tool" id="satelliteBtn"><i class="fa-solid fa-earth-asia"></i><span class="tool-label">ดาวเทียม</span></button>
-        <button class="tool" id="trafficBtn"><i class="fa-solid fa-car"></i><span class="tool-label">จราจร</span></button>
-        <button class="tool" id="elevationBtn"><i class="fa-solid fa-mountain-sun"></i><span class="tool-label">ความสูง</span></button>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidehead">
+        <div class="side-title"><h2>รายการ Geofence</h2><span class="count" id="pointCount">0 จุด</span></div>
+        <div class="searchwrap"><span>⌕</span><input id="searchInput" placeholder="ค้นหาชื่อ Geofence..." autocomplete="off"></div>
+        <div class="filterline"><button class="chip active" data-filter="all">ทั้งหมด</button><button class="chip" data-filter="valid">มีพิกัด</button><button class="chip" data-filter="invalid">พิกัดไม่ครบ</button></div>
       </div>
-      <div class="toolbar-group">
-        <button class="tool" id="fitBtn"><i class="fa-solid fa-expand"></i><span class="tool-label">ดูทุกจุด</span></button>
-        <button class="tool" id="openProviderBtn"><i class="fa-solid fa-arrow-up-right-from-square"></i><span class="tool-label">เปิดแผนที่</span></button>
+      <div class="pointlist" id="pointList"><div class="empty"><span class="loading"></span>กำลังโหลดรายการพิกัด</div></div>
+      <div class="sidefoot"><span id="sourceLabel">Google Sheets API</span><span id="lastUpdated">—</span></div>
+    </aside>
+    <section class="maparea">
+      <div id="map"></div>
+      <div class="mapcontrols">
+        <div class="map-switcher">
+          <button class="mapbtn active" data-layer="street">▦ แผนที่</button>
+          <button class="mapbtn" data-layer="satellite">▧ ดาวเทียม</button>
+        </div>
+        <div class="mapright">
+          <div class="mapstats">
+            <div class="floating-card"><div class="statlabel">สถานที่ทั้งหมด</div><div class="statvalue" id="statTotal">—</div></div>
+            <div class="floating-card"><div class="statlabel">พิกัดพร้อมใช้งาน</div><div class="statvalue" id="statValid"><em>—</em></div></div>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="map-wrap"><div id="map"></div><div class="toast" id="toast"></div>
-      <div class="map-footer">
-        <div class="map-card"><strong id="selectedName">เลือกจุดบนแผนที่</strong><span id="selectedCoords">คลิกหมุดหรือเลือกรายชื่อทางซ้าย</span></div>
-        <div class="map-card coords-card"><div class="legend"><span><i class="fa-solid fa-location-dot"></i>ตำแหน่ง</span><span><i class="fa-solid fa-layer-group"></i>แผนที่ฐาน</span></div><span id="mapStatus">แผนที่พร้อมใช้งาน</span></div>
+      <div class="mapbottom">
+        <div class="legend"><div class="floating-card"><span class="legend-item"><span class="legend-dot"></span>จุดพิกัด</span><span class="legend-item"><span class="legend-dot cluster"></span>กลุ่มจุด</span></div></div>
+        <div class="floating-card coordinates" id="cursorCoords">LAT — · LNG —</div>
       </div>
-    </div>
+      <div class="toast" id="toast"></div>
+    </section>
   </main>
 </div>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
-(() => {
-'use strict';
-const API_URL = 'https://script.google.com/macros/s/AKfycbzCB23vC133nGr1Ek1-IGboh_ZfMRZKyuBOCZeIN0Fvduax3XIV7rCl2NX8NXzpdU8c/exec';
+/* ใช้ URL Web App ที่ผู้ใช้ให้มาลิงก์ล่าสุด */
+const API_URL = 'https://script.google.com/macros/s/AKfycbxGxDaEkB1IVbzSbMFkMJ08zfx9n9qIRDReGx9Mb-bg2n5C0jh8KuiwDnGjdjTvuVCF/exec';
 const $ = id => document.getElementById(id);
-let points = [], selected = null, elevationOn = false, satelliteOn = false;
+let allRows = [], filteredRows = [], activeFilter = 'all', selectedId = null, currentLayer = 'street';
+let markerById = new Map();
 
-function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.classList.remove('show'),3600)}
-function setApiStatus(ok,msg,err){$('apiStatus').textContent=msg;$('apiDot').classList.toggle('online',ok);$('apiDot').classList.toggle('error',!!err)}
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&','<':'<','>':'>','"':'"',"'":'''}[c]));
-}
-
-if (typeof L === 'undefined' || typeof L.markerClusterGroup !== 'function') {
-  setApiStatus(false,'โหลดไลบรารีแผนที่ไม่สำเร็จ',true);
-  $('pointList').innerHTML='<div class="empty"><i class="fa-solid fa-triangle-exclamation" style="font-size:24px;color:#f0ad4e"></i><br><b>โหลด Leaflet ไม่สำเร็จ</b><br>ตรวจสอบอินเทอร์เน็ตหรือการบล็อก CDN แล้วรีเฟรชหน้า</div>';
-  return;
-}
-
-const map = L.map('map', {zoomControl:false, maxZoom:19}).setView([13.7563,100.5018],6);
+const map = L.map('map',{zoomControl:false,preferCanvas:true}).setView([13.7563,100.5018],6);
 L.control.zoom({position:'bottomright'}).addTo(map);
-
-const markerClusterGroup = L.markerClusterGroup({maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true});
-map.addLayer(markerClusterGroup);
-
-const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});
-const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'});
-const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap © CARTO'});
-const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'© OpenTopoMap (CC-BY-SA)'});
+const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+});
+/* Esri World Imagery: ภาพดาวเทียม; ใช้งานจริงควรตรวจสอบเงื่อนไขผู้ให้บริการ */
+const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+  maxZoom:19,attribution:'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+});
 streetLayer.addTo(map);
-let currentLayer = streetLayer;
+const clusters = L.markerClusterGroup({chunkedLoading:true,chunkInterval:100,chunkDelay:25,maxClusterRadius:55,showCoverageOnHover:false,removeOutsideVisibleBounds:true,spiderfyOnMaxZoom:true});
+map.addLayer(clusters);
 
-function getField(r, key){
-  const k = Object.keys(r).find(x => x.trim().toLowerCase() === key.toLowerCase());
-  return k !== undefined ? r[k] : undefined;
+function toast(message, duration=3500){const el=$('toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),duration)}
+function normalizeKey(k){return String(k??'').trim().toLowerCase().replace(/[\s_-]/g,'')}
+function findValue(row, aliases){
+  if(!row || typeof row!=='object') return '';
+  const keys=Object.keys(row);
+  for(const alias of aliases){const key=keys.find(k=>normalizeKey(k)===normalizeKey(alias));if(key!==undefined)return row[key]}
+  return '';
 }
-
-function normalizeRows(data){
-  const rows = Array.isArray(data) ? data
-    : (data && Array.isArray(data.data)) ? data.data
-    : (data && Array.isArray(data.records)) ? data.records
-    : (data && Array.isArray(data.results)) ? data.results : [];
+function asNumber(v){
+  if(typeof v==='number') return Number.isFinite(v)?v:null;
+  if(v===null||v===undefined||String(v).trim()==='') return null;
+  const n=Number(String(v).trim().replace(',','.'));
+  return Number.isFinite(n)?n:null;
+}
+function normalizeRows(payload){
+  let rows=payload;
+  if(payload && !Array.isArray(payload)){
+    rows=payload.data??payload.rows??payload.values??payload.result??payload.records??payload.items??payload.geofences??payload.locations;
+    if(!rows && payload.success===false) throw new Error(payload.message||'API แจ้งว่าไม่สำเร็จ');
+  }
+  if(!Array.isArray(rows)) throw new Error('รูปแบบข้อมูล API ไม่ใช่รายการแถว กรุณาตรวจสอบผลลัพธ์จาก Google Apps Script');
+  if(rows.length && Array.isArray(rows[0])){
+    const headers=rows[0].map(v=>String(v).trim());
+    rows=rows.slice(1).map(r=>Object.fromEntries(headers.map((h,i)=>[h,r[i]])));
+  }
   return rows.map((r,i)=>{
-    const name = String(getField(r,'Geofence') || getField(r,'ชื่อ Geofence') || `จุดที่ ${i+1}`);
-    const lat = Number(getField(r,'Latitude'));
-    const lon = Number(getField(r,'Longitude'));
-    return {id:String(i+1), name, lat, lon, raw:r};
-  }).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon) && p.lat!==0 && p.lon!==0 && Math.abs(p.lat)<=90 && Math.abs(p.lon)<=180);
+    if(Array.isArray(r)) return {id:i,name:String(r[0]??`จุดที่ ${i+1}`),lat:asNumber(r[1]),lng:asNumber(r[2]),raw:r};
+    const name=findValue(r,['Geofence']) || `จุดที่ ${i+1}`;
+    const lat=asNumber(findValue(r,['Latitude','Lat']));
+    const lng=asNumber(findValue(r,['Longitude','Long','Lng','Lon']));
+    return {id:i,name:String(name).trim(),lat,lng,raw:r};
+  });
 }
-
+function validPoint(p){return p.lat!==null&&p.lng!==null&&p.lat>=-90&&p.lat<=90&&p.lng>=-180&&p.lng<=180}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function buildMarker(p){
+  const marker=L.marker([p.lat,p.lng],{title:p.name});
+  marker.bindPopup(`<div class="popup-title">${esc(p.name)}</div><div class="popup-coord">Latitude: ${p.lat}<br>Longitude: ${p.lng}</div>`);
+  marker.on('click',()=>{selectedId=p.id;renderList();});
+  markerById.set(p.id,marker);
+  return marker;
+}
+function renderMap(){
+  clusters.clearLayers();markerById.clear();
+  const valid=allRows.filter(validPoint);
+  const markers=valid.map(buildMarker);
+  clusters.addLayers(markers);
+  $('statTotal').textContent=allRows.length.toLocaleString('th-TH');
+  $('statValid').textContent=valid.length.toLocaleString('th-TH');
+  if(valid.length===1) map.setView([valid[0].lat,valid[0].lng],13);
+  else if(valid.length>1) map.fitBounds(L.latLngBounds(valid.map(p=>[p.lat,p.lng])),{padding:[45,45],maxZoom:12});
+}
+function renderList(){
+  const q=$('searchInput').value.trim().toLocaleLowerCase();
+  filteredRows=allRows.filter(p=>{
+    const matches=p.name.toLocaleLowerCase().includes(q);
+    const valid=validPoint(p);
+    return matches&&(activeFilter==='all'||(activeFilter==='valid'&&valid)||(activeFilter==='invalid'&&!valid));
+  });
+  $('pointCount').textContent=`${filteredRows.length.toLocaleString('th-TH')} จุด`;
+  if(!filteredRows.length){$('pointList').innerHTML='<div class="empty">ไม่พบรายการที่ตรงกับการค้นหา</div>';return}
+  $('pointList').innerHTML=filteredRows.map(p=>{
+    const valid=validPoint(p), selected=selectedId===p.id;
+    return `<div class="pointrow ${selected?'selected':''}" data-id="${p.id}">
+      <div class="pin">${valid?'⌖':'!'}</div>
+      <div class="pointinfo"><div class="pointname">${esc(p.name)}</div><div class="pointcoord">${valid?`${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`:'ไม่พบ Latitude / Longitude'}</div></div>
+      <div class="pointarrow">${valid?'›':'·'}</div>
+    </div>`;
+  }).join('');
+  $('pointList').querySelectorAll('.pointrow').forEach(el=>el.addEventListener('click',()=>{
+    const id=Number(el.dataset.id),p=allRows.find(x=>x.id===id);
+    if(!p)return;
+    selectedId=id;renderList();
+    if(!validPoint(p)){toast('รายการนี้ไม่มีพิกัด Latitude / Longitude ที่ถูกต้อง');return}
+    if($('sidebar').classList.contains('collapsed')&&window.innerWidth<=850) $('sidebar').classList.add('collapsed');
+    map.flyTo([p.lat,p.lng],Math.max(map.getZoom(),15),{duration:.7});
+    const marker=markerById.get(id);if(marker) setTimeout(()=>marker.openPopup(),500);
+  }));
+}
 async function loadData(){
-  $('refreshBtn').innerHTML='<span class="loading"></span> โหลด...';
-  setApiStatus(false,'กำลังเชื่อมต่อข้อมูล...');
+  $('statusText').textContent='กำลังโหลดข้อมูล...';
+  $('pointList').innerHTML='<div class="empty"><span class="loading"></span>กำลังโหลดรายการพิกัด</div>';
+  $('refreshBtn').disabled=true;
   try{
-    const ctrl = new AbortController(); const tm = setTimeout(()=>ctrl.abort(),30000);
-    const res = await fetch(API_URL,{method:'GET',cache:'no-store',signal:ctrl.signal}).finally(()=>clearTimeout(tm));
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const text = await res.text();
-    let data;
-    try{ data = JSON.parse(text); }
-    catch(e){ console.log(text.slice(0,300)); throw new Error('API ไม่ได้ส่ง JSON กลับมา (อาจเป็นหน้า login ให้ตั้ง Who has access = Anyone)'); }
-    console.log('API data:', data);
-    points = normalizeRows(data);
-    if(!points.length) throw new Error('เชื่อมต่อสำเร็จ แต่ไม่พบข้อมูลพิกัด Latitude/Longitude ที่ถูกต้อง (ต้องไม่เป็น 0)');
-    renderPoints();
-    setApiStatus(true,`ออนไลน์ · ${points.length} จุด`);
-    $('mapStatus').textContent='อัปเดตข้อมูลสำเร็จ';
-    toast(`โหลดพิกัดสำเร็จ ${points.length} จุด`);
+    const response=await fetch(API_URL,{method:'GET',cache:'no-store',redirect:'follow'});
+    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload=await response.json();
+    allRows=normalizeRows(payload);
+    renderMap();renderList();
+    $('statusText').textContent='เชื่อมต่อข้อมูลแล้ว';
+    $('lastUpdated').textContent=new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+    toast(`โหลดข้อมูลสำเร็จ ${allRows.length.toLocaleString('th-TH')} รายการ`);
   }catch(err){
     console.error(err);
-    setApiStatus(false,'เชื่อมต่อ API ไม่สำเร็จ',true);
-    $('mapStatus').textContent='ไม่สามารถโหลดข้อมูลจาก API';
-    $('pointList').innerHTML=`<div class="empty"><i class="fa-solid fa-triangle-exclamation" style="font-size:24px;color:#f0ad4e"></i><br><b>โหลดข้อมูลไม่สำเร็จ</b><br>${escapeHtml(err.message)}<br><br>ตรวจสอบสิทธิ์ Web App, รูปแบบ JSON และ CORS ของ Apps Script แล้วลองอีกครั้ง</div>`;
-    toast('ไม่สามารถอ่านข้อมูล API ได้ โปรดตรวจสอบการเผยแพร่ Web App');
-  }finally{
-    $('refreshBtn').innerHTML='<i class="fa-solid fa-rotate"></i> รีเฟรช';
-  }
+    $('statusText').textContent='โหลดข้อมูลไม่สำเร็จ';
+    $('pointList').innerHTML=`<div class="empty">ไม่สามารถโหลดข้อมูลได้<br><br>${esc(err.message)}<br><br>ตรวจสอบว่า Apps Script เปิดสิทธิ์ Web app ให้เข้าถึงได้ และส่งข้อมูล JSON ที่มีคอลัมน์ Geofence, Latitude, Longitude</div>`;
+    toast('โหลดข้อมูลไม่สำเร็จ — ตรวจสอบ URL, สิทธิ์ Web App และ CORS',5000);
+  }finally{$('refreshBtn').disabled=false}
 }
-
-function markerIcon(active){return L.divIcon({className:'custom-pin',html:`<div style="width:${active?34:29}px;height:${active?34:29}px;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);background:${active?'linear-gradient(135deg,#536dfe,#9c4dff)':'linear-gradient(135deg,#2674e8,#18b7a4)'};border:3px solid white;box-shadow:0 4px 12px #172b4d55;display:grid;place-items:center"><span style="transform:rotate(45deg);color:white;font-size:${active?13:11}px"><i class="fa-solid fa-location-dot"></i></span></div>`,iconSize:[34,34],iconAnchor:[17,31],popupAnchor:[0,-28]})}
-
-function renderPoints(){
-  markerClusterGroup.clearLayers();
-  selected = null;
-  $('pointCount').textContent = points.length+' จุด';
-  points.forEach(p=>{
-    const m = L.marker([p.lat,p.lon],{icon:markerIcon(false)});
-    m.bindPopup(`<b>${escapeHtml(p.name)}</b><br><small>${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}</small>`);
-    m.on('click',()=>selectPoint(p.id));
-    p.marker = m;
-    markerClusterGroup.addLayer(m);
-  });
-  renderList();
-  if(points.length) fitPoints(false);
-}
-
-function renderList(){
-  const q = $('searchInput').value.trim().toLowerCase();
-  const filtered = points.filter(p=>(p.name+' '+p.lat+' '+p.lon+' '+p.id).toLowerCase().includes(q));
-  $('listSummary').textContent = `แสดง ${filtered.length} จาก ${points.length} จุด`;
-  if(!filtered.length){$('pointList').innerHTML='<div class="empty">ไม่พบจุดที่ตรงกับคำค้นหา</div>';return}
-  $('pointList').innerHTML = filtered.map(p=>`<div class="point ${selected&&selected.id===p.id?'active':''}" data-id="${escapeHtml(p.id)}"><div class="pin"><i class="fa-solid fa-location-dot"></i></div><div class="point-main"><div class="point-name">${escapeHtml(p.name)}</div><div class="point-coords">${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</div><div class="point-meta"><i class="fa-solid fa-circle-check"></i> พิกัดถูกต้อง</div></div></div>`).join('');
-  $('pointList').querySelectorAll('.point').forEach(el=>el.addEventListener('click',()=>selectPoint(el.dataset.id)));
-}
-
-function selectPoint(id){
-  const p = points.find(x=>x.id===id); if(!p) return;
-  selected = p;
-  points.forEach(x=>x.marker && x.marker.setIcon(markerIcon(x===p)));
-  const show = () => { p.marker.openPopup(); };
-  if(markerClusterGroup.hasLayer(p.marker)){
-    markerClusterGroup.zoomToShowLayer(p.marker, show);
-  }
-  $('selectedName').textContent = p.name;
-  $('selectedCoords').textContent = `${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}`;
-  renderList();
-}
-
-function fitPoints(showToast=true){
-  if(!points.length){toast('ยังไม่มีพิกัดให้แสดง');return}
-  if(points.length===1) map.setView([points[0].lat,points[0].lon],14);
-  else map.fitBounds(markerClusterGroup.getBounds().pad(.16));
-  if(showToast) toast(`แสดงพิกัดทั้งหมด ${points.length} จุด`);
-}
-
-function setBase(layer,button){
-  if(currentLayer) map.removeLayer(currentLayer);
-  currentLayer = layer; layer.addTo(map);
-  ['streetBtn','satelliteBtn','elevationBtn'].forEach(id=>$(id).classList.remove('selected'));
-  if(button) $(button).classList.add('selected');
-}
-function streetBase(){return document.body.classList.contains('dark')?darkLayer:streetLayer}
-
-$('sidebarToggle').addEventListener('click',()=>{$('sidebar').classList.toggle('collapsed');setTimeout(()=>map.invalidateSize(),280)});
 $('searchInput').addEventListener('input',renderList);
-$('refreshBtn').addEventListener('click',loadData);
-$('fitBtn').addEventListener('click',()=>fitPoints());
-$('streetBtn').addEventListener('click',()=>{satelliteOn=false;elevationOn=false;setBase(streetBase(),'streetBtn');toast('แสดงแผนที่ถนน')});
-$('satelliteBtn').addEventListener('click',()=>{satelliteOn=true;elevationOn=false;setBase(satelliteLayer,'satelliteBtn');toast('แสดงภาพถ่ายดาวเทียมจาก Esri')});
-$('elevationBtn').addEventListener('click',()=>{satelliteOn=false;elevationOn=true;setBase(topoLayer,'elevationBtn');toast('แสดงแผนที่ภูมิประเทศ (เส้นชั้นความสูง)')});
-$('trafficBtn').addEventListener('click',()=>toast('ชั้นข้อมูลจราจรยังไม่รองรับ (ต้องใช้ API key ของผู้ให้บริการ)'));
-$('logoutBtn').addEventListener('click',()=>toast('ยังไม่ได้เชื่อมต่อระบบล็อกอิน'));
+document.querySelectorAll('.chip').forEach(btn=>btn.addEventListener('click',()=>{
+  document.querySelectorAll('.chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');activeFilter=btn.dataset.filter;renderList();
+}));
+$('sidebarToggle').addEventListener('click',()=>{ $('sidebar').classList.toggle('collapsed');setTimeout(()=>map.invalidateSize(),280); });
 $('themeToggle').addEventListener('click',()=>{
   document.body.classList.toggle('dark');
-  const dark = document.body.classList.contains('dark');
-  $('themeIcon').className = dark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-  if(!satelliteOn && !elevationOn) setBase(streetBase(), dark ? null : 'streetBtn');
+  const dark=document.body.classList.contains('dark');
+  $('themeIcon').textContent=dark?'☀':'☾';
+  $('themeToggle').title=dark?'เปลี่ยนเป็นโหมดสว่าง':'เปลี่ยนเป็นโหมดมืด';
 });
-
-function selectedPoint(){return selected||points[0]||null}
-function providerUrl(provider,p){
-  if(!p) return null;
-  const lat=p.lat, lon=p.lon, q=encodeURIComponent(`${lat},${lon}`);
-  if(provider==='google') return `https://www.google.com/maps/search/?api=1&query=${q}`;
-  if(provider==='here') return `https://share.here.com/l/${lat},${lon}`;
-  if(provider==='apple') return `https://maps.apple.com/?ll=${lat},${lon}&q=${encodeURIComponent(p.name)}`;
-  return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;
-}
-function openProvider(){
-  const p = selectedPoint();
-  if(!p){toast('ไม่มีพิกัดสำหรับเปิดแผนที่');return}
-  window.open(providerUrl($('providerSelect').value,p),'_blank','noopener,noreferrer');
-}
-$('openProviderBtn').addEventListener('click',openProvider);
-$('providerBtn').addEventListener('click',e=>{if(e.target.tagName!=='SELECT')openProvider()});
-
+$('refreshBtn').addEventListener('click',loadData);
+document.querySelectorAll('[data-layer]').forEach(btn=>btn.addEventListener('click',()=>{
+  document.querySelectorAll('[data-layer]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  currentLayer=btn.dataset.layer;
+  if(currentLayer==='satellite'){map.removeLayer(streetLayer);satelliteLayer.addTo(map)}
+  else{map.removeLayer(satelliteLayer);streetLayer.addTo(map)}
+}));
+$('logoutBtn').addEventListener('click',()=>{
+  const go=confirm('ต้องการออกจากหน้า Access Maps หรือไม่?');
+  if(go){window.location.href='about:blank';}
+});
+map.on('mousemove',e=>$('cursorCoords').textContent=`LAT ${e.latlng.lat.toFixed(5)} · LNG ${e.latlng.lng.toFixed(5)}`);
+map.on('click',e=>{if(e.originalEvent.target===map.getContainer()) selectedId=null;});
 loadData();
-})();
 </script>
 </body>
 </html>
