@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>เส้นทางวิ่งรถจากไฟล์ Excel</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--text:#1d2433;--muted:#6b7488;--border:#dde2ec;--accent:#2563eb;--grid:#e6e9f0;color-scheme:light}
+:root[data-theme="dark"]{--bg:#0f1420;--card:#192030;--text:#e6eaf3;--muted:#8d97ad;--border:#2a3347;--accent:#60a5fa;--grid:#2a3347;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans Thai","Sarabun",system-ui,sans-serif;background:var(--bg);color:var(--text);transition:background .2s,color .2s}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px 18px;background:var(--card);border-bottom:1px solid var(--border)}
+h1{font-size:18px;margin:0;flex:1;min-width:200px}
+.btn,select{font:inherit;font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:hover{filter:brightness(1.08)}
+#theme{width:38px;height:38px;padding:0;display:grid;place-items:center}
+#theme svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+#theme .moon{display:none}
+:root[data-theme="dark"] #theme .sun{display:none}
+:root[data-theme="dark"] #theme .moon{display:block}
+main{padding:14px 18px;display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+#map{height:56vh;min-height:320px}
+:root[data-theme="dark"] .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9)}
+.chartbox{padding:12px 14px;height:280px;position:relative}
+.chartbox h2{font-size:14px;margin:0 0 6px;color:var(--muted);font-weight:600}
+.chartwrap{position:absolute;inset:44px 14px 12px}
+.chartwrap canvas{touch-action:pan-y;cursor:crosshair}
+.chartbox h2 small{font-weight:400}
+#info{font-size:13px;color:var(--muted)}
+.empty{padding:60px 20px;text-align:center;color:var(--muted)}
+.leaflet-tooltip{font-family:inherit;font-size:12.5px;line-height:1.55}
+.leaflet-tooltip b{color:#2563eb}
+</style>
+</head>
+<body>
+<header>
+  <h1>🚚 แสดงเส้นทางวิ่งรถจากไฟล์ Excel</h1>
+  <span id="info"></span>
+  <label style="font-size:14px;display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="curve" checked>เส้นโค้งมน</label>
+  <select id="veh" hidden></select>
+  <input type="file" id="file" accept=".xlsx,.xls,.csv" hidden>
+  <button class="btn primary" onclick="file.click()">อัปโหลดไฟล์ Excel</button>
+  <button class="btn" id="theme" title="สลับโหมดสว่าง/มืด" aria-label="สลับธีม">
+    <svg class="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    <svg class="moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+  </button>
+</header>
+<main>
+  <div class="card"><div id="map"></div></div>
+  <div class="card chartbox"><h2 style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>กราฟความเร็ว (กม./ชม.) <small>• ล้อเมาส์ซูม • ลากเลื่อน • คลิกเลือกจุด • ดับเบิลคลิกรีเซ็ต</small></span><span><button class="btn" style="padding:2px 10px" onclick="zoom(.6)" title="ซูมเข้า">＋</button> <button class="btn" style="padding:2px 10px" onclick="zoom(1.6)" title="ซูมออก">－</button> <button class="btn" style="padding:2px 10px" onclick="resetZoom()">รีเซ็ต</button></span></h2><div class="chartwrap"><canvas id="chart"></canvas></div></div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const COLORS=['#2563eb','#e11d48','#16a34a','#f59e0b','#9333ea','#0891b2','#ea580c','#65a30d'];
+// ชื่อคอลัมน์ที่รองรับ (ตัดช่องว่าง/ตัวพิมพ์ใหญ่เล็กออกก่อนเทียบ)
+const ALIAS={
+  vehicle:['หมายเลขรถ','ทะเบียน','ทะเบียนรถ','vehicle','vehicleno','plate'],
+  time:['วันและเวลา','วันที่และเวลา','วันที่เวลา','วันที่/เวลา','datetime','date','เวลา'],
+  lat:['ละติจูด','latitude','lat'],
+  lng:['ลองจิจูด','ลองติจูด','longitude','lng','lon','long'],
+  gps:['สถานะgps','gpsstatus','gps'],
+  place:['สถานที่','location','place','address'],
+  speed:['ความเร็ว','speed'],
+  engine:['สถานะเครื่องยนต์','สถานะเครื่อง','เครื่องยนต์','เครื่อง','acc','ignition','engine','enginestatus'],
+  driver:['ชื่อคนขับ','คนขับ','driver','drivername'],
+  net:['networktype','network','เครือข่าย']
+};
+const norm=s=>String(s).normalize('NFC').toLowerCase().replace(/[\s_\-\.:()]/g,'');
+let map,layer,chart,series=[],markers=[],sel=null,selMark=null,full=[0,1],drag=null;
+
+// ---------- Theme ----------
+function setTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('theme',t)}catch(e){}if(chart)styleChart()}
+let saved=null;try{saved=localStorage.getItem('theme')}catch(e){}
+setTheme(saved||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+$('theme').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+
+// ---------- Map ----------
+map=L.map('map').setView([13.75,100.5],6);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+layer=L.layerGroup().addTo(map);
+
+// ---------- Parse ----------
+function parseTime(v){
+  if(v instanceof Date)return +v;
+  if(typeof v==='number')return Math.round((v-25569)*86400000)+new Date().getTimezoneOffset()*60000;
+  const m=String(v).trim().match(/^(\d{1,4})[\/\-.](\d{1,2})[\/\-.](\d{1,4})[ T,]*(\d{1,2})?:?(\d{2})?:?(\d{2})?/);
+  if(!m)return NaN;
+  let a=+m[1],b=+m[2],c=+m[3],y,mo,d;
+  if(a>31){y=a;mo=b;d=c}else{d=a;mo=b;y=c}
+  if(y>2400)y-=543; if(y<100)y+=2000;
+  return +new Date(y,mo-1,d,+m[4]||0,+m[5]||0,+m[6]||0);
+}
+const fmt=ms=>{const d=new Date(ms),p=n=>String(n).padStart(2,'0');return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`};
+const esc=s=>String(s??'-').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+$('file').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{
+    const wb=XLSX.read(await f.arrayBuffer(),{cellDates:true});
+    let rows=[];
+    for(const sn of wb.SheetNames){
+      const a=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:'',raw:true});
+      let hi=0,best=-1;
+      for(let i=0;i<Math.min(a.length,15);i++){
+        const sc=a[i].filter(h=>h!==''&&Object.values(ALIAS).some(al=>al.some(x=>norm(h).includes(norm(x))))).length;
+        if(sc>best){best=sc;hi=i}
+      }
+      if(!a.length||best<1)continue;
+      const hd=a[hi].map(h=>String(h).trim());
+      const r=a.slice(hi+1).map(row=>{const o={};hd.forEach((h,j)=>{if(h)o[h]=row[j]});return o});
+      if(r.length>rows.length)rows=r;
+    }
+    if(!rows.length)throw new Error('ไม่พบหัวตารางที่รู้จักในไฟล์');
+    const keys=Object.keys(rows[0]),map_={},missing=[],used=new Set();
+    const pick=fn=>keys.find(h=>!used.has(h)&&fn(norm(h)));
+    for(const k in ALIAS){
+      const al=ALIAS[k].map(norm);
+      const found=pick(h=>al.includes(h))||pick(h=>al.some(a=>a.length>2&&h.includes(a)));
+      if(found){map_[k]=found;used.add(found)}else missing.push(k);
+    }
+    if(!map_.lat||!map_.lng)throw new Error('ไม่พบคอลัมน์ละติจูด/ลองจิจูด');
+    const pts=rows.map(r=>({
+      vehicle:map_.vehicle?String(r[map_.vehicle]):'-',
+      t:map_.time?parseTime(r[map_.time]):NaN,
+      lat:parseFloat(String(r[map_.lat]).replace(/,/g,'')),lng:parseFloat(String(r[map_.lng]).replace(/,/g,'')),
+      gps:r[map_.gps],place:r[map_.place],speed:parseFloat(r[map_.speed]),
+      engine:r[map_.engine],driver:r[map_.driver],net:r[map_.net]
+    })).filter(p=>isFinite(p.lat)&&isFinite(p.lng)&&!(p.lat===0&&p.lng===0));
+    if(!pts.length)throw new Error('ไม่พบพิกัดที่ใช้งานได้');
+    const g={};pts.forEach(p=>(g[p.vehicle]??=[]).push(p));
+    series=Object.entries(g).map(([name,arr],i)=>({name,color:COLORS[i%COLORS.length],pts:arr.sort((a,b)=>(a.t||0)-(b.t||0))}));
+    const sel=$('veh');
+    sel.innerHTML='<option value="all">รถทุกคัน ('+series.length+')</option>'+series.map((s,i)=>`<option value="${i}">${esc(s.name)} (${s.pts.length} จุด)</option>`).join('');
+    sel.hidden=series.length<2;sel.value='all';
+    $('info').textContent=`${pts.length} จุด${missing.length?' • ไม่พบคอลัมน์: '+missing.join(', '):''}`;
+    render();
+  }catch(err){alert('อ่านไฟล์ไม่สำเร็จ: '+err.message)}
+  e.target.value='';
+};
+$('veh').onchange=render;
+$('curve').onchange=()=>{if(series.length)render()};
+
+// ---------- Smooth curve (Centripetal Catmull-Rom) ----------
+function smooth(pts){
+  const P=pts.filter((p,i)=>i===0||p[0]!==pts[i-1][0]||p[1]!==pts[i-1][1]);
+  if(P.length<3)return P;
+  const seg=P.length>3000?3:P.length>1000?6:12,out=[P[0]];
+  const d=(a,b)=>Math.max(Math.pow(Math.hypot(a[0]-b[0],a[1]-b[1]),.5),1e-9);
+  const mix=(a,b,ta,tb,u)=>[0,1].map(k=>((tb-u)*a[k]+(u-ta)*b[k])/(tb-ta));
+  for(let i=0;i<P.length-1;i++){
+    const p1=P[i],p2=P[i+1];
+    const p0=P[i-1]||[2*p1[0]-p2[0],2*p1[1]-p2[1]];
+    const p3=P[i+2]||[2*p2[0]-p1[0],2*p2[1]-p1[1]];
+    const t0=0,t1=t0+d(p0,p1),t2=t1+d(p1,p2),t3=t2+d(p2,p3);
+    for(let j=1;j<=seg;j++){
+      const u=t1+(t2-t1)*j/seg;
+      const A1=mix(p0,p1,t0,t1,u),A2=mix(p1,p2,t1,t2,u),A3=mix(p2,p3,t2,t3,u);
+      const B1=mix(A1,A2,t0,t2,u),B2=mix(A2,A3,t1,t3,u);
+      out.push(j===seg?p2:mix(B1,B2,t1,t2,u));
+    }
+  }
+  return out;
+}
+
+// ---------- Render ----------
+function popup(p){
+  return `<b>หมายเลขรถ:</b> ${esc(p.vehicle)}<br><b>วันที่/เวลา:</b> ${isNaN(p.t)?'-':fmt(p.t)}<br>`+
+  `<b>ละติจูด:</b> ${p.lat} &nbsp; <b>ลองจิจูด:</b> ${p.lng}<br><b>สถานะ GPS:</b> ${esc(p.gps)}<br>`+
+  `<b>สถานที่:</b> ${esc(p.place)}<br><b>ความเร็ว:</b> ${isFinite(p.speed)?p.speed+' กม./ชม.':'-'}<br>`+
+  `<b>เครื่องยนต์:</b> ${esc(p.engine)}<br><b>คนขับ:</b> ${esc(p.driver)}<br><b>Network:</b> ${esc(p.net)}`;
+}
+function render(){
+  layer.clearLayers();markers=[];sel=null;selMark=null;
+  const v=$('veh').value,list=v==='all'?series:[series[+v]],all=[];
+  list.forEach((s,si)=>{
+    const ll=s.pts.map(p=>[p.lat,p.lng]);all.push(...ll);
+    L.polyline($('curve').checked?smooth(ll):ll,{color:s.color,weight:4,opacity:.85,lineJoin:'round',lineCap:'round'}).addTo(layer);
+    const ms=s.pts.map((p,i)=>{
+      const first=i===0,last=i===s.pts.length-1;
+      const m=L.circleMarker([p.lat,p.lng],{radius:first||last?8:4.5,color:'#fff',weight:1.5,fillColor:first?'#16a34a':last?'#dc2626':s.color,fillOpacity:1})
+        .bindTooltip(popup(p)+(first?'<br>🟢 <b>จุดเริ่มต้น</b>':last?'<br>🔴 <b>จุดสิ้นสุด</b>':''),{sticky:true,direction:'top'})
+        .on('click',()=>select(si,i,false))
+        .on('mouseover',function(){this.setStyle({radius:8})}).on('mouseout',function(){this.setRadius(first||last?8:4.5)})
+        .addTo(layer);
+      return m;
+    });
+    markers.push(ms);
+  });
+  if(all.length)map.fitBounds(all,{padding:[30,30]});
+  drawChart(list);
+  setTimeout(()=>{map.invalidateSize();if(all.length)map.fitBounds(all,{padding:[30,30]})},50);
+}
+
+// ---------- Chart ----------
+function styleChart(){
+  const cs=getComputedStyle(document.documentElement),t=cs.getPropertyValue('--muted'),g=cs.getPropertyValue('--grid');
+  for(const ax of ['x','y']){chart.options.scales[ax].ticks.color=t;chart.options.scales[ax].grid.color=g;chart.options.scales[ax].title.color=t}
+  chart.options.plugins.legend.labels.color=t;chart.update('none');
+}
+function drawChart(list){
+  if(chart)chart.destroy();
+  const xs=list.flatMap(s=>s.pts.map(p=>p.t)).filter(isFinite);
+  full=xs.length?[Math.min(...xs),Math.max(...xs)]:[0,1];
+  chart=new Chart($('chart'),{
+    type:'line',
+    plugins:[selPlugin],
+    data:{datasets:list.map(s=>({label:s.name,borderColor:s.color,backgroundColor:s.color+'33',fill:list.length===1,
+      data:s.pts.map(p=>({x:p.t,y:isFinite(p.speed)?p.speed:null})),pointRadius:2.5,pointHoverRadius:6,borderWidth:2,tension:.15,spanGaps:true}))},
+    options:{
+      responsive:true,maintainAspectRatio:false,animation:false,parsing:false,
+      interaction:{mode:'nearest',intersect:false,axis:'x'},
+      scales:{
+        x:{type:'linear',ticks:{callback:v=>fmt(v).replace(' ','\n'),maxTicksLimit:8,maxRotation:0},grid:{},title:{display:true,text:'วันที่และเวลา'}},
+        y:{beginAtZero:true,ticks:{},grid:{},title:{display:true,text:'กม./ชม.'}}
+      },
+      plugins:{
+        legend:{display:list.length>1,labels:{}},
+        tooltip:{callbacks:{title:i=>fmt(i[0].parsed.x),label:c=>`${c.dataset.label}: ${c.parsed.y} กม./ชม.`}}
+      },
+      onHover:(e,els)=>{
+        if(!els.length||drag?.moved)return;
+        const {datasetIndex:d,index:i}=els[0],m=markers[d]?.[i];
+        if(m){markers.flat().forEach(x=>x.closeTooltip());m.openTooltip()}
+      },
+    }
+  });
+  styleChart();
+}
+
+// ---------- Chart zoom / pan / sync ----------
+const selPlugin={id:'sel',afterDatasetsDraw(c){
+  if(!sel)return;const el=c.getDatasetMeta(sel.d).data[sel.i];if(!el)return;
+  const {ctx,chartArea:a}=c;if(el.x<a.left||el.x>a.right)return;
+  ctx.save();ctx.strokeStyle='#f59e0b';ctx.lineWidth=2;ctx.setLineDash([5,4]);
+  ctx.beginPath();ctx.moveTo(el.x,a.top);ctx.lineTo(el.x,a.bottom);ctx.stroke();
+  ctx.setLineDash([]);ctx.beginPath();ctx.arc(el.x,el.y??a.bottom,7,0,7);ctx.stroke();ctx.restore();}};
+
+function setRange(a,b){
+  const [F0,F1]=full,minSpan=Math.max((F1-F0)/300,1000);
+  if(b-a>=F1-F0){a=F0;b=F1;}
+  else{
+    if(b-a<minSpan){const m=(a+b)/2;a=m-minSpan/2;b=m+minSpan/2}
+    if(a<F0){b+=F0-a;a=F0}if(b>F1){a-=b-F1;b=F1}
+  }
+  const x=chart.options.scales.x;
+  if(a<=F0&&b>=F1){x.min=undefined;x.max=undefined}else{x.min=a;x.max=b}
+  chart.update('none');
+}
+function zoom(f,c){
+  const sc=chart.scales.x;if(!sc)return;
+  const cx=c??(sc.min+sc.max)/2;
+  setRange(cx-(cx-sc.min)*f,cx+(sc.max-cx)*f);
+}
+function resetZoom(){const x=chart.options.scales.x;x.min=undefined;x.max=undefined;chart.update('none')}
+
+// เลือกจุด: ซิงค์ทั้งแผนที่และกราฟ
+function select(d,i,pan){
+  const m=markers[d]?.[i];if(!m||!chart)return;
+  sel={d,i};
+  if(selMark)layer.removeLayer(selMark);
+  selMark=L.circleMarker(m.getLatLng(),{radius:15,color:'#f59e0b',weight:3,fill:false,interactive:false}).addTo(layer);
+  if(pan!==false)map.panTo(m.getLatLng());
+  m.openTooltip();
+  const xv=chart.data.datasets[d].data[i].x,sc=chart.scales.x;
+  if(isFinite(xv)&&(xv<sc.min||xv>sc.max)){const h=(sc.max-sc.min)/2;setRange(xv-h,xv+h)}
+  chart.update('none');
+  const el=chart.getDatasetMeta(d).data[i],act=[{datasetIndex:d,index:i}];
+  chart.setActiveElements(act);
+  chart.tooltip.setActiveElements(act,{x:el.x,y:el.y??0});
+  chart.update('none');
+}
+const cv=$('chart');
+cv.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const r=cv.getBoundingClientRect();
+  zoom(e.deltaY<0?.8:1.25,chart.scales.x.getValueForPixel(e.clientX-r.left));
+},{passive:false});
+cv.addEventListener('pointerdown',e=>{
+  const sc=chart.scales.x;drag={x:e.clientX,min:sc.min,max:sc.max,moved:false};cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove',e=>{
+  if(!drag)return;const dx=e.clientX-drag.x;
+  if(Math.abs(dx)>4)drag.moved=true;
+  if(drag.moved){const a=chart.chartArea,per=(drag.max-drag.min)/(a.right-a.left);setRange(drag.min-dx*per,drag.max-dx*per)}
+});
+cv.addEventListener('pointerup',e=>{
+  const was=drag;drag=null;
+  if(was&&!was.moved){
+    const els=chart.getElementsAtEventForMode(e,'nearest',{intersect:false,axis:'x'},false);
+    if(els.length)select(els[0].datasetIndex,els[0].index,true);
+  }
+});
+cv.addEventListener('pointercancel',()=>{drag=null});
+cv.addEventListener('dblclick',resetZoom);
+drawChart([]);
+</script>
+</body>
+</html>
