@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แดชบอร์ดข้อมูลการปลดล็อค</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--text:#1d2433;--muted:#6b7385;--line:#e4e7ef;--accent:#f5a300;--accent2:#2f6fed;--ok:#16a34a;--bad:#dc2626;--head:#ffc000;--headtext:#1d2433;--shadow:0 1px 3px rgba(20,30,60,.08)}
+[data-theme=dark]{--bg:#0f131b;--card:#181e29;--text:#e8ecf4;--muted:#939bb0;--line:#2a3243;--accent:#ffb52e;--accent2:#6b9cff;--ok:#4ade80;--bad:#f87171;--head:#3a2f0b;--headtext:#ffd266;--shadow:none}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Noto Sans Thai',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;transition:background .2s,color .2s}
+.wrap{max-width:1500px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
+h1{font-size:24px;margin:0;font-weight:700}
+.grad{background:linear-gradient(90deg,#f5a300,#ff5e62,#a855f7,#2f6fed,#14b8a6,#f5a300);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;animation:shift 6s linear infinite}
+@keyframes shift{to{background-position:-300% 0}}
+@media (prefers-reduced-motion:reduce){.grad{animation:none}}
+.sub{color:var(--muted);font-size:12px;margin-top:2px}
+.right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.status{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);padding:6px 12px;border-radius:999px;font-size:12px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.dot.live{background:var(--ok);box-shadow:0 0 0 3px rgba(22,163,74,.2)}
+.dot.demo{background:var(--accent)}
+.dot.err{background:var(--bad)}
+button,input,select{font:inherit;color:var(--text)}
+.btn{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:#1d2433;border-color:var(--accent);font-weight:500}
+.theme{width:38px;height:38px;border-radius:50%;padding:0;font-size:18px;line-height:1}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:var(--shadow)}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end;margin-bottom:12px}
+label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
+.filters input,.filters select{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chip{padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--bg);cursor:pointer;font-size:12px}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#1d2433;font-weight:500}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:12px}
+.kpi .v{font-size:24px;font-weight:700;margin-top:2px}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi .s{font-size:11px;color:var(--muted);margin-top:2px}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-bottom:12px}
+.panel h3{margin:0 0 10px;font-size:14px}
+.bars{display:flex;align-items:flex-end;gap:3px;height:140px;padding-top:6px}
+.bars .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
+.bars .b{width:100%;background:var(--accent);border-radius:3px 3px 0 0;min-height:0;position:relative}
+.bars .n{font-size:10px;color:var(--muted)}
+.bars .x{font-size:9px;color:var(--muted);margin-top:2px}
+.hbar{display:grid;grid-template-columns:110px 1fr 34px;gap:8px;align-items:center;margin:6px 0;font-size:12px}
+.hbar .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar .tr{background:var(--bg);border-radius:6px;height:12px;overflow:hidden}
+.hbar .f{height:100%;background:var(--accent2);border-radius:6px}
+.tablebox{overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:1300px}
+th{position:sticky;top:0;background:var(--head);color:var(--headtext);padding:9px 8px;font-size:12px;cursor:pointer;white-space:nowrap;border-right:1px solid rgba(0,0,0,.08)}
+td{padding:8px;border-top:1px solid var(--line);font-size:12.5px;vertical-align:top}
+tr:hover td{background:rgba(245,163,0,.08)}
+tbody tr{cursor:pointer}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;background:rgba(22,163,74,.15);color:var(--ok)}
+.tag.warn{background:rgba(245,163,0,.18);color:var(--accent)}
+.long{color:var(--bad);font-weight:500}
+.foot{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin:8px 2px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+.modal.show{display:flex}
+.modal .box{background:var(--card);border-radius:14px;max-width:640px;width:100%;max-height:88vh;overflow:auto;padding:18px}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-size:13px}
+.kv b{color:var(--muted);font-weight:400}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>📊 <span class="grad">แดชบอร์ดข้อมูลการปลดล็อค</span></h1>
+    <div class="sub">สรุปเคสจอดนอกจุด การขอปลด และการอนุมัติ</div>
+  </div>
+  <div class="right">
+    <div class="status"><span class="dot demo" id="dot"></span><span id="stText">ข้อมูลตัวอย่าง</span><span style="color:var(--muted)" id="stTime"></span></div>
+    <button class="btn primary" id="refresh">⟳ รีเฟรช</button>
+    <button class="btn theme" id="theme" title="สลับโทนสี">🌙</button>
+  </div>
+</header>
+
+<div class="panel" style="margin-bottom:12px">
+  <div class="presets" id="presets">
+    <span class="chip" data-p="all">ทั้งหมด</span>
+    <span class="chip" data-p="today">วันนี้</span>
+    <span class="chip" data-p="yesterday">เมื่อวาน</span>
+    <span class="chip" data-p="7">7 วันล่าสุด</span>
+    <span class="chip" data-p="30">30 วันล่าสุด</span>
+    <span class="chip" data-p="night">กะดึก 22:00-06:00</span>
+  </div>
+  <div class="filters">
+    <div><label>ตั้งแต่ (วัน/เวลาเริ่ม)</label><input type="datetime-local" id="from"></div>
+    <div><label>ถึง</label><input type="datetime-local" id="to"></div>
+    <div><label>ค้นหา (เคส, คนขับ, ทะเบียน, DO, สถานที่)</label><input type="search" id="q" placeholder="พิมพ์เพื่อค้นหา..."></div>
+    <div><label>คนขับ</label><select id="fDriver"></select></div>
+    <div><label>ผู้ปลด</label><select id="fUnlocker"></select></div>
+    <div><label>ระยะเวลา</label><select id="fDur"><option value="">ทั้งหมด</option><option value="5">ไม่เกิน 5 นาที</option><option value="30">5-30 นาที</option><option value="31">เกิน 30 นาที</option></select></div>
+  </div>
+</div>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="charts">
+  <div class="panel"><h3>จำนวนเคสตามชั่วโมง (เวลาเริ่ม)</h3><div class="bars" id="cHour"></div></div>
+  <div class="panel"><h3>จำนวนเคสตามผู้ปลด</h3><div id="cUnlock"></div></div>
+  <div class="panel"><h3>คนขับที่มีเคสมากสุด</h3><div id="cDriver"></div></div>
+  <div class="panel"><h3>สาเหตุที่พบบ่อย</h3><div id="cReason"></div></div>
+</div>
+
+<div class="panel">
+  <h3>รายละเอียดเคส <span style="color:var(--muted);font-weight:400;font-size:12px">(คลิกหัวคอลัมน์เพื่อเรียง, คลิกแถวเพื่อดูรายละเอียด)</span></h3>
+  <div class="tablebox"><table><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table></div>
+  <div class="foot"><span id="count"></span><button class="btn" id="csv">⬇ ส่งออก CSV</button></div>
+</div>
+</div>
+
+<div class="modal" id="modal"><div class="box"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><h3 style="margin:0" id="mTitle"></h3><button class="btn" id="mClose">✕</button></div><div class="kv" id="mBody"></div></div></div>
+
+<script>
+/* ===== ตั้งค่าการเชื่อม Google Sheets API =====
+   1) เปิด Google Sheets API ใน Google Cloud Console แล้วสร้าง API Key
+   2) แชร์ชีตเป็น "ทุกคนที่มีลิงก์ดูได้"
+   3) ใส่ค่าด้านล่าง (ลำดับคอลัมน์ในชีตต้องตรงกับ COLS; แถวแรกเป็นหัวตาราง) */
+const CONFIG = {
+  API_URL: 'https://script.google.com/macros/s/AKfycbxpwVdOGbXOL5EkQVtoR5NEowUkr3ZwtFo1NCxBolrPOS0wBgWNwGPzx7Nb5a3nxbIl/exec',           // วางลิงก์ Web app จาก Apps Script (ลงท้าย /exec) - ถ้าใส่ จะใช้อันนี้ก่อน
+  SHEET_ID: '',          // เช่น 1AbC...xyz
+  API_KEY: '',           // API Key
+  RANGE: 'Sheet1!A:Q',   // ชื่อแท็บ + ช่วงคอลัมน์
+  REFRESH_SEC: 60        // รีเฟรชอัตโนมัติทุกกี่วินาที (0 = ปิด)
+};
+const COLS = [
+ ['case','Case No'],['code','รหัสคนขับ'],['driver','ชื่อคนขับ'],['plate','ทะเบียนรถ'],['start','วัน/เวลาเริ่ม'],['end','วัน/เวลาสิ้นสุด'],
+ ['dur','รวมเวลา'],['status','สถานะรถ'],['place','สถานที่'],['do','เลข DO'],['req','ขอปลด'],['appr','อนุมัติ/ไม่อนุมัติ'],
+ ['imp','ความสำคัญ'],['unlockAt','วันที่ปลด'],['unlocker','ผู้ปลด'],['reason','สาเหตุที่ปลดล็อค'],['gps','จำนวน GPS/CCTV']
+];
+const DEMO = `PK-261101-0001|SCC0066|นายประภาส ขาวผิว|7003035กท|31/10/2026 23:04:32|01/11/2026 00:15:24|01:10:52|จอดนอกจุด|บางนาเหนือ, บางนา, กรุงเทพมหานคร|3100128293|พิจารณาแล้ว|อนุมัติ|A|01/11/2026 03:32:08|KNM|ลงน้ำมัน บริษัท พี.เอ. บางนา จำกัด|2 (1/1)
+PK-261031-0103|SCC0359|นายนิวัฒน์ แข็งการ|636228กท|31/10/2026 23:33:37|31/10/2026 23:36:17|00:02:40|จอดนอกจุด|112/1-215 ถนนบางนา-ตราด แขวงบางนา เขตบางนา กรุงเทพมหานคร 10260|3100128975,3100128982|พิจารณาแล้ว|อนุมัติ|A|01/11/2026 03:31:59|KNM|13.6668367,100.6408417 การจราจรหนาแน่น|2 (1/1)
+PK-261031-0096|SCC0069|นายโชคชัย ครรัตน์|676194กท|31/10/2026 20:58:36|31/10/2026 21:01:01|00:02:25|จอดนอกจุด|ถนนลำลูกกา ตำบลลาดสวาย อำเภอลำลูกกา จังหวัดปทุมธานี 12150|3100127022|พิจารณาแล้ว|อนุมัติ|A|31/10/2026 21:32:29|KNM|จอดติดไฟแดงแยกทางเข้าออกหน่วยงาน SC LLK|2 (1/1)
+PK-261031-0091|SCC0352|นายวัชรพงษ์ ชัยพรฐโรจน์|685031กท|31/10/2026 19:25:46|31/10/2026 19:28:46|00:03:00|จอดนอกจุด|ถนนลำลูกกา ตำบลลาดสวาย อำเภอลำลูกกา จังหวัดปทุมธานี 12150|3100127298,3100127302|พิจารณาแล้ว|อนุมัติ|A|31/10/2026 19:56:47|KNM|จอดติดไฟแดงแยกทางเข้าออกหน่วยงาน SC LLK|2 (1/1)
+PK-261031-0090|SCC0357|นายเฉลิมชัย โพธิดา|636232กท|31/10/2026 19:09:31|31/10/2026 19:11:38|00:02:07|จอดนอกจุด|ถนนกาญจนาภิเษก ถนนบริการชั้นใน ตำบลพยอม อำเภอวังน้อย จังหวัดพระนครศรีอยุธยา 13170|3100127307,3100127309|พิจารณาแล้ว|อนุมัติ|A|31/10/2026 19:34:02|KNM|พขร ขอจอดพัก มีอาการปวดหลัง TMS คุณานน|2 (1/1)
+PK-261031-0084|SCC0352|นายวัชรพงษ์ ชัยพรฐโรจน์|685031กท|31/10/2026 18:16:46|31/10/2026 18:18:48|00:02:02|จอดนอกจุด|หน้าผาถนนบางนา-ตราด ตำบลบางแก้ว อำเภอบางพลี จังหวัดสมุทรปราการ 10540|3100127298,3100127302|พิจารณาแล้ว|อนุมัติ|A|31/10/2026 18:57:05|KNM|การจราจรติดขัด|2 (1/1)
+PK-261031-0077|SCC0061|นายรุ่งนิรันตร์ ชัยมงคล|677813กท|31/10/2026 15:01:56|31/10/2026 16:40:44|01:38:48|จอดนอกจุด|พืชอุดม, ลำลูกกา, ปทุมธานี|3100127301,3100127306|พิจารณาแล้ว|อนุมัติ|A|31/10/2026 18:25:42|PHU_DMD|อยู่ลูกค้า บริษัท โชคนาราวาณิชย์ จำกัด|2 (1/1)
+PK-261031-0076|SCC0347|นายโยธิน อินทรปัญญา|636228กท|31/10/2026 16:30:47|31/10/2026 16:32:53|00:02:06|จอดนอกจุด|8/7 ถนนลำลูกกา ตำบลลำคูด อำเภอลำลูกกา จ.ปทุมธานี 12130|3100127304,3100127305|พิจารณาแล้ว|อนุมัติ|A|31/10/2026 17:23:32|PTK|จอดติดไฟแดง|2 (1/1)
+PK-261031-0068|SCC0066|นายประภาส ขาวผิว|7003035กท|31/10/2026 15:22:35|31/10/2026 15:28:54|00:06:19|จอดนอกจุด|ลำไทร, วังน้อย, พระนครศรีอยุธยา|3100126110|พิจารณาแล้ว|อนุมัติ|A|31/10/2026 16:11:42|PTK|ไม่ได้วิ่งงานของ BFPL|2 (1/1)
+PK-261031-0061|SCC0066|นายประภาส ขาวผิว|7003035กท|31/10/2026 13:22:40|31/10/2026 14:42:34|01:19:54|จอดนอกจุด|หนองปลาหมอ, หนองแค, สระบุรี|3100126110|พิจารณาแล้ว|อนุมัติ|A|31/10/2026 14:56:06|PTK|ไม่ได้วิ่งงานของ BFPL|2 (1/1)`;
+
+const $ = id => document.getElementById(id);
+let ROWS = [], sortKey = 'start', sortDir = -1, mode = 'demo', timer;
+
+/* ---------- ธีม ---------- */
+function setTheme(t){
+  document.documentElement.dataset.theme = t;
+  $('theme').textContent = t === 'dark' ? '☀️' : '🌙';
+  try{ localStorage.setItem('theme', t) }catch(e){}
+}
+let saved = null; try{ saved = localStorage.getItem('theme') }catch(e){}
+setTheme(saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+$('theme').onclick = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+
+/* ---------- ข้อมูล ---------- */
+function parseDT(s){
+  const m = /(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2}):?(\d{2})?/.exec(s || '');
+  return m ? new Date(+m[3], m[2]-1, +m[1], +m[4], +m[5], +(m[6]||0)) : null;
+}
+function durSec(s){const p=(s||'').split(':').map(Number);return p.length===3?p[0]*3600+p[1]*60+p[2]:0}
+function fmtDur(sec){const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=Math.round(sec%60);return h?`${h} ชม. ${m} นาที`:m?`${m} นาที ${s} วิ`:`${s} วิ`}
+function build(arr){
+  return arr.filter(r => r[0]).map(r => {
+    const o = {}; COLS.forEach((c,i) => o[c[0]] = (r[i] ?? '').toString().trim());
+    o.startD = parseDT(o.start); o.endD = parseDT(o.end); o.unlockD = parseDT(o.unlockAt); o.sec = durSec(o.dur);
+    return o;
+  }).filter(o => o.startD);
+}
+async function load(){
+  $('dot').className = 'dot'; $('stText').textContent = 'กำลังอัปเดต...';
+  try{
+    if(CONFIG.API_URL){
+      const res = await fetch(CONFIG.API_URL + (CONFIG.API_URL.includes('?') ? '&' : '?') + 't=' + Date.now());
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const j = await res.json();
+      if(j.error) throw new Error(j.error);
+      ROWS = build((j.values || []).slice(1)); mode = 'live';
+    } else if(CONFIG.SHEET_ID && CONFIG.API_KEY){
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(CONFIG.RANGE)}?key=${CONFIG.API_KEY}&valueRenderOption=FORMATTED_VALUE`;
+      const res = await fetch(url);
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const j = await res.json();
+      ROWS = build((j.values || []).slice(1)); mode = 'live';
+    } else {
+      ROWS = build(DEMO.split('\n').map(l => l.split('|'))); mode = 'demo';
+    }
+    $('dot').className = 'dot ' + (mode === 'live' ? 'live' : 'demo');
+    $('stText').textContent = mode === 'live' ? 'เชื่อมต่อ Google Sheets แล้ว' : 'ข้อมูลตัวอย่าง (ยังไม่ตั้งค่า API)';
+    $('stTime').textContent = '· อัปเดตล่าสุด ' + new Date().toLocaleString('th-TH', {dateStyle:'medium', timeStyle:'medium'});
+    fillSelects(); render();
+  }catch(e){
+    $('dot').className = 'dot err';
+    $('stText').textContent = 'อัปเดตไม่สำเร็จ: ' + e.message;
+  }
+}
+function fillSelects(){
+  const fill = (id, vals, label) => {
+    const cur = $(id).value;
+    $(id).innerHTML = `<option value="">${label}</option>` + [...new Set(vals)].filter(Boolean).sort().map(v => `<option>${v}</option>`).join('');
+    $(id).value = cur;
+  };
+  fill('fDriver', ROWS.map(r => r.driver), 'ทั้งหมด');
+  fill('fUnlocker', ROWS.map(r => r.unlocker), 'ทั้งหมด');
+}
+
+/* ---------- ฟิลเตอร์ ---------- */
+const pad = n => String(n).padStart(2,'0');
+const toLocal = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+let nightOnly = false;
+function preset(p){
+  const now = new Date(), sod = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  nightOnly = p === 'night';
+  if(p==='all' || p==='night'){ $('from').value = ''; $('to').value = ''; }
+  else if(p==='today'){ $('from').value = toLocal(sod); $('to').value = toLocal(new Date(sod.getTime()+864e5-6e4)); }
+  else if(p==='yesterday'){ const y = new Date(sod.getTime()-864e5); $('from').value = toLocal(y); $('to').value = toLocal(new Date(sod.getTime()-6e4)); }
+  else { $('from').value = toLocal(new Date(sod.getTime()-(+p-1)*864e5)); $('to').value = toLocal(new Date(sod.getTime()+864e5-6e4)); }
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c.dataset.p === p));
+  render();
+}
+function filtered(){
+  const f = $('from').value ? new Date($('from').value) : null;
+  const t = $('to').value ? new Date($('to').value) : null;
+  const q = $('q').value.trim().toLowerCase(), dr = $('fDriver').value, un = $('fUnlocker').value, du = $('fDur').value;
+  return ROWS.filter(r => {
+    if(f && r.startD < f) return false;
+    if(t && r.startD > t) return false;
+    if(nightOnly){ const h = r.startD.getHours(); if(!(h >= 22 || h < 6)) return false; }
+    if(dr && r.driver !== dr) return false;
+    if(un && r.unlocker !== un) return false;
+    if(du === '5' && r.sec > 300) return false;
+    if(du === '30' && !(r.sec > 300 && r.sec <= 1800)) return false;
+    if(du === '31' && r.sec <= 1800) return false;
+    if(q && !Object.values(r).join(' ').toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+/* ---------- แสดงผล ---------- */
+function countBy(arr, fn){const m={};arr.forEach(r=>{const k=fn(r);if(k)m[k]=(m[k]||0)+1});return Object.entries(m).sort((a,b)=>b[1]-a[1])}
+function hbars(id, data, n=6){
+  const top = data.slice(0,n), max = top[0] ? top[0][1] : 1;
+  $(id).innerHTML = top.length ? top.map(([k,v]) => `<div class="hbar"><span class="t" title="${k}">${k}</span><div class="tr"><div class="f" style="width:${v/max*100}%"></div></div><b>${v}</b></div>`).join('') : '<div class="empty">ไม่มีข้อมูล</div>';
+}
+function render(){
+  const d = filtered();
+  const tot = d.reduce((a,r)=>a+r.sec,0), avg = d.length ? tot/d.length : 0;
+  const longest = d.reduce((a,r)=>r.sec>(a?a.sec:-1)?r:a, null);
+  const approved = d.filter(r => r.appr.includes('อนุมัติ') && !r.appr.includes('ไม่')).length;
+  const lag = d.filter(r=>r.unlockD).map(r=>(r.unlockD-r.endD)/1000).filter(x=>x>=0);
+  const avgLag = lag.length ? lag.reduce((a,b)=>a+b,0)/lag.length : 0;
+  $('kpis').innerHTML = [
+    ['เคสทั้งหมด', d.length, `${new Set(d.map(r=>r.plate)).size} คัน`],
+    ['อนุมัติแล้ว', approved, d.length ? Math.round(approved/d.length*100)+'% ของเคส' : '-'],
+    ['เวลาจอดเฉลี่ย', fmtDur(avg), 'ต่อเคส'],
+    ['เวลาจอดรวม', fmtDur(tot), ''],
+    ['จอดนานสุด', longest ? longest.dur : '-', longest ? longest.case : ''],
+    ['คนขับที่เกี่ยวข้อง', new Set(d.map(r=>r.driver)).size, 'คน'],
+    ['เวลาปลดเฉลี่ยหลังจบเคส', fmtDur(avgLag), 'จากเวลาสิ้นสุดถึงวันที่ปลด']
+  ].map(k => `<div class="panel kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('');
+
+  const hrs = Array(24).fill(0); d.forEach(r => hrs[r.startD.getHours()]++);
+  const mx = Math.max(1, ...hrs);
+  $('cHour').innerHTML = hrs.map((v,h) => `<div class="col" title="${pad(h)}:00 = ${v} เคส"><span class="n">${v||''}</span><div class="b" style="height:${v/mx*100}px"></div><span class="x">${h%3===0?pad(h):''}</span></div>`).join('');
+  hbars('cUnlock', countBy(d, r=>r.unlocker));
+  hbars('cDriver', countBy(d, r=>r.driver));
+  hbars('cReason', countBy(d, r=>r.reason.replace(/[\d.,]+\s*,\s*[\d.]+\s*/,'').slice(0,40)));
+
+  d.sort((a,b) => {
+    const k = sortKey, map = {start:'startD', end:'endD', unlockAt:'unlockD', dur:'sec'};
+    const x = a[map[k]||k], y = b[map[k]||k];
+    return (x > y ? 1 : x < y ? -1 : 0) * sortDir;
+  });
+  $('thead').innerHTML = COLS.map(c => `<th data-k="${c[0]}">${c[1]}${sortKey===c[0]?(sortDir>0?' ▲':' ▼'):''}</th>`).join('');
+  $('tbody').innerHTML = d.length ? d.map((r,i) => `<tr data-i="${ROWS.indexOf(r)}">` + COLS.map(c => {
+    let v = r[c[0]];
+    if(c[0]==='dur') v = `<span class="${r.sec>1800?'long':''}">${v}</span>`;
+    else if(c[0]==='appr') v = `<span class="tag">${v}</span>`;
+    else if(c[0]==='req') v = `<span class="tag warn">${v}</span>`;
+    return `<td>${v}</td>`;
+  }).join('') + '</tr>').join('') : `<tr><td colspan="${COLS.length}" class="empty">ไม่พบข้อมูลในช่วงที่เลือก</td></tr>`;
+  $('count').textContent = `แสดง ${d.length} จาก ${ROWS.length} รายการ`;
+  window._d = d;
+}
+
+/* ---------- อีเวนต์ ---------- */
+$('presets').onclick = e => e.target.dataset.p && preset(e.target.dataset.p);
+['from','to'].forEach(id => $(id).onchange = () => { nightOnly = false; document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on')); render(); });
+['q','fDriver','fUnlocker','fDur'].forEach(id => $(id).oninput = render);
+$('thead').onclick = e => { const k = e.target.dataset.k; if(!k) return; sortDir = sortKey===k ? -sortDir : 1; sortKey = k; render(); };
+$('tbody').onclick = e => {
+  const tr = e.target.closest('tr'); if(!tr || tr.dataset.i === undefined) return;
+  const r = ROWS[+tr.dataset.i];
+  $('mTitle').textContent = r.case;
+  $('mBody').innerHTML = COLS.map(c => `<b>${c[1]}</b><span>${r[c[0]] || '-'}</span>`).join('');
+  $('modal').classList.add('show');
+};
+$('mClose').onclick = () => $('modal').classList.remove('show');
+$('modal').onclick = e => { if(e.target === $('modal')) $('modal').classList.remove('show') };
+$('refresh').onclick = load;
+$('csv').onclick = () => {
+  const rows = [COLS.map(c=>c[1])].concat((window._d||[]).map(r => COLS.map(c => r[c[0]])));
+  const csv = '\ufeff' + rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'unlock-cases.csv'; a.click();
+};
+load();
+if(CONFIG.REFRESH_SEC > 0) timer = setInterval(load, CONFIG.REFRESH_SEC * 1000);
+</script>
+</body>
+</html>
