@@ -174,6 +174,33 @@ function build(arr){
     return o;
   }).filter(o => o.startD);
 }
+
+/* แปลง JSON จาก Apps Script ให้เป็นแถวแบบอาร์เรย์ ไม่ว่าโครงสร้างจะเป็นแบบใด */
+function normalize(j){
+  let d = j;
+  const pick = o => {
+    if(Array.isArray(o)) return o;
+    if(o && typeof o === 'object'){
+      for(const k of ['values','data','rows','result','records','items']) if(o[k] !== undefined){ const r = pick(o[k]); if(r) return r; }
+      for(const k of Object.keys(o)){ if(Array.isArray(o[k])) return o[k]; }
+      for(const k of Object.keys(o)){ const r = pick(o[k]); if(r) return r; }
+    }
+    return null;
+  };
+  d = pick(d);
+  if(!d) throw new Error('รูปแบบข้อมูลไม่ถูกต้อง: ' + JSON.stringify(j).slice(0,120));
+  if(!d.length) return [];
+  if(Array.isArray(d[0])){
+    const first = String(d[0][0] || '').trim();
+    const isHeader = first === 'Case No' || !/^PK-/i.test(first);
+    return isHeader ? d.slice(1) : d;
+  }
+  // แถวเป็นออบเจ็กต์: จับคู่ตามชื่อหัวคอลัมน์ ถ้าไม่ตรงใช้ลำดับค่า
+  return d.map(o => {
+    const byHead = COLS.map(c => o[c[1]] ?? o[c[0]]);
+    return byHead.some(v => v !== undefined) ? byHead : Object.values(o);
+  });
+}
 async function load(){
   $('dot').className = 'dot'; $('stText').textContent = 'กำลังอัปเดต...';
   try{
@@ -181,14 +208,14 @@ async function load(){
       const res = await fetch(CONFIG.API_URL + (CONFIG.API_URL.includes('?') ? '&' : '?') + 't=' + Date.now());
       if(!res.ok) throw new Error('HTTP ' + res.status);
       const j = await res.json();
-      if(j.error) throw new Error(j.error);
-      ROWS = build((j.values || []).slice(1)); mode = 'live';
+      if(j && j.error) throw new Error(j.error);
+      ROWS = build(normalize(j)); mode = 'live';
     } else if(CONFIG.SHEET_ID && CONFIG.API_KEY){
       const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(CONFIG.RANGE)}?key=${CONFIG.API_KEY}&valueRenderOption=FORMATTED_VALUE`;
       const res = await fetch(url);
       if(!res.ok) throw new Error('HTTP ' + res.status);
       const j = await res.json();
-      ROWS = build((j.values || []).slice(1)); mode = 'live';
+      ROWS = build(normalize(j)); mode = 'live';
     } else {
       ROWS = build(DEMO.split('\n').map(l => l.split('|'))); mode = 'demo';
     }
