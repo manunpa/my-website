@@ -171,6 +171,36 @@ streetLayer.addTo(map);
 const clusters = L.markerClusterGroup({chunkedLoading:true,chunkInterval:100,chunkDelay:25,maxClusterRadius:55,showCoverageOnHover:false,removeOutsideVisibleBounds:true,spiderfyOnMaxZoom:true});
 map.addLayer(clusters);
 
+  /* ===== ค้นหาด้วยพิกัด Lat, Lng ===== */
+let searchMarker = null;
+
+// แปลงข้อความเป็นพิกัด รองรับ "13.7563, 100.5018" / "13.7563 100.5018" / "13.7563,100.5018"
+function parseLatLng(text){
+  const m = String(text).trim().match(/^(-?\d+(?:[.,]\d+)?)\s*[,\s;/]\s*(-?\d+(?:[.,]\d+)?)$/);
+  if(!m) return null;
+  const lat = Number(m[1].replace(',','.')), lng = Number(m[2].replace(',','.'));
+  if(!Number.isFinite(lat)||!Number.isFinite(lng)) return null;
+  if(lat<-90||lat>90||lng<-180||lng>180) return null;
+  return {lat,lng};
+}
+
+function clearSearchMarker(){
+  if(searchMarker){ map.removeLayer(searchMarker); searchMarker=null; }
+}
+
+function showSearchMarker(lat,lng){
+  clearSearchMarker(); // เอาหมุดเก่าออกก่อนเสมอ
+  const icon = L.divIcon({
+    className:'',
+    html:'<div style="width:22px;height:22px;border-radius:50%;background:#e05260;border:3px solid #fff;box-shadow:0 0 0 4px #e0526055,0 3px 10px #0006"></div>',
+    iconSize:[22,22], iconAnchor:[11,11]
+  });
+  searchMarker = L.marker([lat,lng],{icon,zIndexOffset:1000}).addTo(map);
+  searchMarker.bindPopup(`<div class="popup-title">พิกัดที่ค้นหา</div><div class="popup-coord">Latitude: ${lat}<br>Longitude: ${lng}</div>`);
+  map.flyTo([lat,lng],Math.max(map.getZoom(),16),{duration:.8});
+  setTimeout(()=>searchMarker&&searchMarker.openPopup(),850);
+}
+
 function toast(message, duration=3500){const el=$('toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),duration)}
 function normalizeKey(k){return String(k??'').trim().toLowerCase().replace(/[\s_-]/g,'')}
 function findValue(row, aliases){
@@ -242,7 +272,8 @@ function buildSupplierOptions(){
 function renderList(){
   const q=$('searchInput').value.trim().toLocaleLowerCase();
   filteredRows=allRows.filter(p=>{
-    const matches=(p.name+' '+p.supplier).toLocaleLowerCase().includes(q);
+    const isCoord = !!parseLatLng(q);
+    const matches = isCoord || (p.name+' '+p.supplier).toLocaleLowerCase().includes(q);
     if(activeSupplier!=='all'&&p.supplier!==activeSupplier) return false;
     const valid=validPoint(p);
     return matches&&(activeFilter==='all'||(activeFilter==='valid'&&valid)||(activeFilter==='invalid'&&!valid));
@@ -289,6 +320,24 @@ async function loadData(){
   }finally{$('refreshBtn').disabled=false}
 }
 $('searchInput').addEventListener('input',renderList);
+
+// กด Enter เพื่อค้นหาพิกัด
+$('searchInput').addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return;
+  const text=e.target.value.trim();
+  if(!text) { clearSearchMarker(); return; }
+  const pt=parseLatLng(text);
+  if(pt){
+    showSearchMarker(pt.lat,pt.lng);
+  }else if(/^[-\d.,\s;/]+$/.test(text)){
+    toast('รูปแบบพิกัดไม่ถูกต้อง ตัวอย่าง: 13.7563, 100.5018');
+  }
+});
+
+// ล้างช่องค้นหา = เอาหมุดค้นหาออก
+$('searchInput').addEventListener('input',e=>{
+  if(!e.target.value.trim()) clearSearchMarker();
+});
 $('supplierSelect').addEventListener('change',e=>{
   activeSupplier=e.target.value;
   e.target.classList.toggle('on',activeSupplier!=='all');
