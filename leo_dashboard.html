@@ -162,8 +162,15 @@ $('theme').onclick = () => setTheme(document.documentElement.dataset.theme === '
 
 /* ---------- ข้อมูล ---------- */
 function parseDT(s){
-  const m = /(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2}):?(\d{2})?/.exec(s || '');
-  return m ? new Date(+m[3], m[2]-1, +m[1], +m[4], +m[5], +(m[6]||0)) : null;
+  s = (s == null ? '' : String(s)).trim();
+  let y,mo,d,hh=0,mi=0,ss=0,m;
+  const t = '(?:[ T,]+(\\d{1,2}):(\\d{2})(?::(\\d{2}))?)?';
+  if((m = new RegExp('(\\d{1,2})[/\\-.](\\d{1,2})[/\\-.](\\d{4})'+t).exec(s))){ d=+m[1]; mo=+m[2]; y=+m[3]; hh=+(m[4]||0); mi=+(m[5]||0); ss=+(m[6]||0); }
+  else if((m = new RegExp('(\\d{4})[/\\-.](\\d{1,2})[/\\-.](\\d{1,2})'+t).exec(s))){ y=+m[1]; mo=+m[2]; d=+m[3]; hh=+(m[4]||0); mi=+(m[5]||0); ss=+(m[6]||0); }
+  else return null;
+  if(y > 2400) y -= 543;               // ปี พ.ศ. -> ค.ศ.
+  const dt = new Date(y, mo-1, d, hh, mi, ss);
+  return isNaN(dt) ? null : dt;
 }
 function durSec(s){const p=(s||'').split(':').map(Number);return p.length===3?p[0]*3600+p[1]*60+p[2]:0}
 function fmtDur(sec){const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=Math.round(sec%60);return h?`${h} ชม. ${m} นาที`:m?`${m} นาที ${s} วิ`:`${s} วิ`}
@@ -191,6 +198,12 @@ function normalize(j){
   if(!d) throw new Error('รูปแบบข้อมูลไม่ถูกต้อง: ' + JSON.stringify(j).slice(0,120));
   if(!d.length) return [];
   if(Array.isArray(d[0])){
+    const clean = x => String(x == null ? '' : x).replace(/\s+/g,' ').trim();
+    const header = d[0].map(clean);
+    const idx = COLS.map(c => header.indexOf(c[1]));
+    if(idx.filter(i => i >= 0).length >= 8){          // จับคู่ตามชื่อหัวคอลัมน์ ไม่พึ่งลำดับ
+      return d.slice(1).map(r => idx.map(i => i >= 0 ? r[i] : ''));
+    }
     const first = String(d[0][0] || '').trim();
     const isHeader = first === 'Case No' || !/^PK-/i.test(first);
     return isHeader ? d.slice(1) : d;
@@ -201,6 +214,15 @@ function normalize(j){
     return byHead.some(v => v !== undefined) ? byHead : Object.values(o);
   });
 }
+function buildChecked(j){
+  const raw = normalize(j);
+  const rows = build(raw);
+  if(!rows.length){
+    const sample = raw[0] ? JSON.stringify(raw[0]).slice(0,160) : '(ไม่มีแถวข้อมูล)';
+    throw new Error(`อ่านได้ ${raw.length} แถว แต่ใช้งานไม่ได้ ตัวอย่างแถวแรก: ${sample}`);
+  }
+  return rows;
+}
 async function load(){
   $('dot').className = 'dot'; $('stText').textContent = 'กำลังอัปเดต...';
   try{
@@ -209,13 +231,13 @@ async function load(){
       if(!res.ok) throw new Error('HTTP ' + res.status);
       const j = await res.json();
       if(j && j.error) throw new Error(j.error);
-      ROWS = build(normalize(j)); mode = 'live';
+      ROWS = buildChecked(j); mode = 'live';
     } else if(CONFIG.SHEET_ID && CONFIG.API_KEY){
       const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(CONFIG.RANGE)}?key=${CONFIG.API_KEY}&valueRenderOption=FORMATTED_VALUE`;
       const res = await fetch(url);
       if(!res.ok) throw new Error('HTTP ' + res.status);
       const j = await res.json();
-      ROWS = build(normalize(j)); mode = 'live';
+      ROWS = buildChecked(j); mode = 'live';
     } else {
       ROWS = build(DEMO.split('\n').map(l => l.split('|'))); mode = 'demo';
     }
