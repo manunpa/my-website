@@ -66,6 +66,10 @@ tbody tr{cursor:pointer}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-size:13px}
 .kv b{color:var(--muted);font-weight:400}
 .empty{padding:30px;text-align:center;color:var(--muted)}
+  #cDay{overflow-x:auto;padding-bottom:4px}
+  #cDay .col{flex:0 0 26px}
+  #cDay .x{white-space:nowrap}
+  #cMonth .col{flex:1 1 0;max-width:70px}
 </style>
 </head>
 <body>
@@ -108,6 +112,8 @@ tbody tr{cursor:pointer}
   <div class="panel"><h3>จำนวนเคสตามผู้ปลด</h3><div id="cUnlock"></div></div>
   <div class="panel"><h3>คนขับที่มีเคสมากสุด</h3><div id="cDriver"></div></div>
   <div class="panel"><h3>สาเหตุที่พบบ่อย</h3><div id="cReason"></div></div>
+  <div class="panel"><h3>การแจ้งเตือนรายวัน <span style="color:var(--muted);font-weight:400;font-size:12px">(สูงสุด 60 วันล่าสุดในช่วงที่เลือก)</span></h3><div class="bars" id="cDay"></div></div>
+  <div class="panel"><h3>การแจ้งเตือนรายเดือน</h3><div class="bars" id="cMonth"></div></div>
 </div>
 
 <div class="panel">
@@ -330,6 +336,42 @@ function hbars(id, data, n=6){
   const top = data.slice(0,n), max = top[0] ? top[0][1] : 1;
   $(id).innerHTML = top.length ? top.map(([k,v]) => `<div class="hbar"><span class="t" title="${k}">${k}</span><div class="tr"><div class="f" style="width:${v/max*100}%"></div></div><b>${v}</b></div>`).join('') : '<div class="empty">ไม่มีข้อมูล</div>';
 }
+  const MTH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function drawBars(id, items){
+  const mx = Math.max(1, ...items.map(i => i.v));
+  $(id).innerHTML = items.length
+    ? items.map(i => `<div class="col" title="${i.t}"><span class="n">${i.v||''}</span><div class="b" style="height:${i.v/mx*100}px"></div><span class="x">${i.x||''}</span></div>`).join('')
+    : '<div class="empty">ไม่มีข้อมูล</div>';
+}
+function renderTrend(d){
+  const key = x => `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`;
+
+  // รายวัน: เติมวันที่ไม่มีเคสให้เป็น 0 และแสดงไม่เกิน 60 วันล่าสุด
+  const day = {}; d.forEach(r => { const k = key(r.startD); day[k] = (day[k]||0) + 1; });
+  const days = [];
+  if(d.length){
+    const ts = d.map(r => r.startD.getTime());
+    const maxT = Math.max(...ts), minT = Math.min(...ts);
+    let cur = new Date(Math.max(minT, maxT - 59*864e5)); cur.setHours(0,0,0,0);
+    const last = new Date(maxT); last.setHours(0,0,0,0);
+    for(; cur <= last; cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()+1)){
+      const v = day[key(cur)] || 0;
+      days.push({
+        v,
+        x: (cur.getDate()===1 || !days.length) ? `${cur.getDate()} ${MTH[cur.getMonth()]}` : cur.getDate(),
+        t: `${cur.getDate()} ${MTH[cur.getMonth()]} ${cur.getFullYear()+543}: ${v} เคส`
+      });
+    }
+  }
+  drawBars('cDay', days);
+
+  // รายเดือน
+  const mon = {}; d.forEach(r => { const k = r.startD.getFullYear()*100 + r.startD.getMonth(); mon[k] = (mon[k]||0) + 1; });
+  drawBars('cMonth', Object.keys(mon).sort().map(k => {
+    const y = Math.floor(k/100), m = k%100;
+    return {v: mon[k], x: `${MTH[m]} ${String(y+543).slice(-2)}`, t: `${MTH[m]} ${y+543}: ${mon[k]} เคส`};
+  }));
+}
 function render(){
   const d = filtered();
   const tot = d.reduce((a,r)=>a+r.sec,0), avg = d.length ? tot/d.length : 0;
@@ -352,7 +394,7 @@ function render(){
   $('cHour').innerHTML = hrs.map((v,h) => `<div class="col" title="${pad(h)}:00 = ${v} เคส"><span class="n">${v||''}</span><div class="b" style="height:${v/mx*100}px"></div><span class="x">${h%3===0?pad(h):''}</span></div>`).join('');
   hbars('cUnlock', countBy(d, r=>r.unlocker));
   hbars('cDriver', countBy(d, r=>r.driver));
-  hbars('cReason', countBy(d, r=>r.reason.replace(/[\d.,]+\s*,\s*[\d.]+\s*/,'').slice(0,40)));
+  hbars('cReason', countBy(d, r=>r.reason.replace(/[\d.,]+\s*,\s*[\d.]+\s*/,'').slice(0,40)));  renderTrend(d);
 
   d.sort((a,b) => {
     const k = sortKey, map = {start:'startD', end:'endD', unlockAt:'unlockD', dur:'sec'};
