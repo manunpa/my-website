@@ -92,6 +92,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
   <h2>ตัวกรองและเกณฑ์ตรวจสอบ</h2>
   <p class="hint">ค่าเฉลี่ยคำนวณจากรถที่วิ่งถึงระยะทางขั้นต่ำ แล้วเทียบรถแต่ละคันกับค่าเฉลี่ยนั้น</p>
   <div class="filters">
+   <label>เดือน<select id="fMonth"></select></label>
    <label>หน่วยงาน<select id="fFleet"></select></label>
    <label>ประเภทแจ้งเตือน<select id="fType"></select></label>
    <label>คำนวณต่อระยะทาง (กม.)<input id="fN" type="number" min="1" value="1000"></label>
@@ -144,6 +145,25 @@ function extract(json){
   throw new Error('รูปแบบข้อมูลจาก API ไม่ตรงกับที่คาดไว้ ต้องมีทั้งชีต Mileage และ Alarm (ดูวิธีแก้โค้ด Apps Script)');
 }
 
+// ====== วันที่ / เดือน ======
+const mk = (y,m) => { y = +y; m = +m; if(y > 2400) y -= 543; return (m>=1 && m<=12) ? y + '-' + String(m).padStart(2,'0') : ''; };
+function isoYm(s){ const m = String(s||'').trim().match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/); return m ? mk(m[1],m[2]) : ''; }
+function slashYm(s,dmy){
+  const m = String(s||'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(!m) return '';
+  const a = +m[1], b = +m[2];
+  const mo = a > 12 ? b : b > 12 ? a : dmy ? b : a;
+  return mk(m[3],mo);
+}
+function monthOfAlarm(r){ // วันที่แจ้งเตือนเป็นแบบ วัน/เดือน/ปี
+  const t = (Object.entries(r).find(([k]) => norm(k).startsWith('วันและเวลา')) || [,''])[1];
+  return isoYm(t) || slashYm(t,true);
+}
+function monthOfMileage(r){ // ใช้ Begin Time ก่อน ถ้าอ่านไม่ได้ใช้ End Time
+  const b = field(r,'Begin Time'), e = field(r,'End Time');
+  return isoYm(b) || isoYm(e) || slashYm(b,false) || slashYm(e,false);
+}
+const monthLabel = k => new Date(+k.slice(0,4), +k.slice(5)-1, 1).toLocaleDateString('th-TH',{month:'long',year:'numeric'});
+
 // ====== โหลดข้อมูล ======
 let RAW = null, sortKey = 'rate', sortDir = -1, query = '';
 async function load(){
@@ -154,6 +174,8 @@ async function load(){
     const json = await res.json();
     if(json.status === 'error') throw new Error(json.message);
     RAW = extract(json);
+    RAW.mileage.forEach(r => r.__ym = monthOfMileage(r));
+    RAW.alarm.forEach(r => r.__ym = monthOfAlarm(r));
     setupFilters();
     $('stamp').textContent = 'อัปเดตล่าสุด ' + new Date().toLocaleString('th-TH') +
       ' • ระยะทาง ' + fmt(RAW.mileage.length) + ' แถว • แจ้งเตือน ' + fmt(RAW.alarm.length) + ' รายการ';
@@ -165,12 +187,18 @@ async function load(){
   }
 }
 function setupFilters(){
-  const fleets = new Set(), types = new Set();
+  const fleets = new Set(), types = new Set(), months = new Set();
   RAW.mileage.forEach(r => { const f = String(field(r,COL.m.fleet)).trim(); if(f) fleets.add(f); });
   RAW.alarm.forEach(r => {
     const f = String(field(r,COL.a.fleet)).trim(); if(f) fleets.add(f);
     const t = String(field(r,COL.a.type)).trim(); if(t) types.add(t);
   });
+  RAW.mileage.concat(RAW.alarm).forEach(r => { if(r.__ym) months.add(r.__ym); });
+  const ml = [...months].sort().reverse();
+  const firstLoad = !$('fMonth').options.length;
+  const keepM = $('fMonth').value;
+  $('fMonth').innerHTML = '<option value="">ทุกเดือน</option>' + ml.map(k => `<option value="${k}">${monthLabel(k)}</option>`).join('');
+  $('fMonth').value = firstLoad ? (ml[0] || '') : (ml.includes(keepM) ? keepM : (ml[0] || ''));
   const keep = [$('fFleet').value, $('fType').value];
   $('fFleet').innerHTML = '<option value="">ทุกหน่วยงาน</option>' + [...fleets].sort().map(f => `<option>${esc(f)}</option>`).join('');
   $('fType').innerHTML = '<option value="">ทุกประเภท</option>' + [...types].sort().map(t => `<option>${esc(t)}</option>`).join('');
@@ -181,15 +209,17 @@ function setupFilters(){
 function compute(){
   const N = Math.max(1, num($('fN').value)), minKm = num($('fMin').value);
   const hi = num($('fHi').value), lo = num($('fLo').value);
-  const fFleet = $('fFleet').value, fType = $('fType').value;
+  const fFleet = $('fFleet').value, fType = $('fType').value, ym = $('fMonth').value;
   const V = {};
   const get = id => V[id] || (V[id] = {id, fleet:'', km:0, alarms:0, types:{}});
   RAW.mileage.forEach(r => {
+    if(ym && r.__ym !== ym) return;
     const id = String(field(r,COL.m.id)).trim(); if(!id) return;
     const v = get(id); v.km += Math.max(0, num(field(r,COL.m.km))); // ค่าติดลบ (เลขไมล์รีเซ็ต) ไม่นำมาคิด
     const f = String(field(r,COL.m.fleet)).trim(); if(f) v.fleet = f;
   });
   RAW.alarm.forEach(r => {
+    if(ym && r.__ym !== ym) return;
     const id = String(field(r,COL.a.id)).trim(); if(!id) return;
     const t = String(field(r,COL.a.type)).trim() || '(ไม่ระบุ)';
     const v = get(id);
@@ -209,6 +239,28 @@ function compute(){
       : v.ratio > hi ? 'high' : v.ratio < lo ? 'low' : 'ok';
   });
   return {list, el, avg, N, sumKm, sumAl, minKm};
+}
+
+// แนวโน้มรายเดือน (ใช้หน่วยงานและประเภทที่เลือก แต่ไม่จำกัดเดือน)
+function trend(){
+  const N = Math.max(1, num($('fN').value)), fFleet = $('fFleet').value, fType = $('fType').value;
+  const fl = {};
+  RAW.mileage.forEach(r => { const id = String(field(r,COL.m.id)).trim(), f = String(field(r,COL.m.fleet)).trim(); if(id && f) fl[id] = f; });
+  RAW.alarm.forEach(r => { const id = String(field(r,COL.a.id)).trim(), f = String(field(r,COL.a.fleet)).trim(); if(id && f && !fl[id]) fl[id] = f; });
+  const M = {};
+  const slot = k => M[k] || (M[k] = {km:0, al:0});
+  RAW.mileage.forEach(r => {
+    const id = String(field(r,COL.m.id)).trim();
+    if(!r.__ym || !id || (fFleet && fl[id] !== fFleet)) return;
+    slot(r.__ym).km += Math.max(0, num(field(r,COL.m.km)));
+  });
+  RAW.alarm.forEach(r => {
+    const id = String(field(r,COL.a.id)).trim();
+    if(!r.__ym || !id || (fFleet && fl[id] !== fFleet)) return;
+    if(fType && String(field(r,COL.a.type)).trim() !== fType) return;
+    slot(r.__ym).al++;
+  });
+  return Object.keys(M).sort().map(k => ({k, ...M[k], rate: M[k].km ? M[k].al / M[k].km * N : 0}));
 }
 
 // ====== แสดงผล ======
@@ -246,7 +298,11 @@ function render(){
   const zeroChips = zeros.length ? zeros.map(v => `<span class="chip s-zero" title="${fmt(v.km)} กม.">${esc(v.id)}</span>`).join('')
     : '<span class="sub">ไม่มีรถที่ไม่เตือนเลย</span>';
 
+  const ymSel = $('fMonth').value;
+  const T2 = trend(), tMaxR = Math.max(...T2.map(t => t.rate), 0.0001);
+  const trendPanel = T2.length > 1 ? `<section class="panel"><h2>แนวโน้มรายเดือน (${unit})</h2><p class="hint">เทียบอัตราแจ้งเตือนรวมของแต่ละเดือน ใช้ดูว่าเดือนไหนเตือนถี่หรือน้อยผิดปกติ</p>${T2.map(t => `<div class="bar" style="grid-template-columns:130px 1fr 150px"><div class="nm">${monthLabel(t.k)}</div><div class="track"><div class="fill" style="width:${t.rate/tMaxR*100}%;background:${t.k===ymSel?'var(--accent)':'var(--mute)'}"></div></div><div class="val">${fmt(t.rate,2)} (${fmt(t.al)} ครั้ง / ${fmt(t.km)} กม.)</div></div>`).join('')}</section>` : '';
   $('app').innerHTML = `
+  <p class="sub" style="margin:0 0 10px">แสดงข้อมูล: <b>${ymSel ? monthLabel(ymSel) : 'ทุกเดือนรวมกัน'}</b></p>
   <div class="kpis">
    <div class="kpi"><b>${fmt(list.length)}</b><span>จำนวนรถ</span></div>
    <div class="kpi"><b>${fmt(D.sumKm)}</b><span>ระยะทางรวม (กม.) ของรถที่ประเมิน</span></div>
@@ -282,6 +338,7 @@ function render(){
    </section>
   </div>
 
+  ${trendPanel}
   <section class="panel">
    <div class="tools">
     <div><h2>รายละเอียดรายคัน</h2><p class="hint" style="margin:0">คลิกหัวตารางเพื่อเรียงลำดับ</p></div>
@@ -335,7 +392,7 @@ $('themeBtn').onclick = () => setTheme(document.documentElement.getAttribute('da
 $('reloadBtn').onclick = load;
 // ส่งออก PDF: ใช้หน้าต่างพิมพ์ของเบราว์เซอร์ แล้วเลือกปลายทาง “บันทึกเป็น PDF”
 $('pdfBtn').onclick = () => window.print();
-['fFleet','fType','fN','fMin','fHi','fLo'].forEach(id => $(id).addEventListener('input', render));
+['fMonth','fFleet','fType','fN','fMin','fHi','fLo'].forEach(id => $(id).addEventListener('input', render));
 load();
 </script>
 </body>
