@@ -106,10 +106,10 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 
 <script>
 // ====== ตั้งค่า ======
-const API_URL = 'https://script.google.com/macros/s/AKfycbxNrVVnkc-4c9kSKHPQIXLCzhUvVRTer4ZGmW5d2O7zXEz8X63PwWjEDWsq4BQPPhg2Dg/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwW35lChBZEb8cKpt1TiAF2O9PyylzJaAnPorxloIpw5JTb515uicEETegQCPXmzH_Rsg/exec';
 const COL = {
   m: {id:'Device No.', km:'Driving distance', fleet:'Fleet'},
-  a: {id:'หมายเลขรถ', type:'ประเภทแจ้งเตือน', fleet:'หน่วยงาน'}
+  a: {id:'หมายเลขรถ', type:['ประเภทการเตือน','ประเภทแจ้งเตือน'], fleet:'หน่วยงาน'}
 };
 const STATUS = {
   high:['เตือนมากผิดปกติ'], low:['เตือนน้อยผิดปกติ'], zero:['ไม่เตือนเลย'],
@@ -123,6 +123,10 @@ const num = v => { const n = parseFloat(String(v ?? '').replace(/[^\d.\-]/g,''))
 const fmt = (n,d=0) => n.toLocaleString('th-TH',{minimumFractionDigits:d,maximumFractionDigits:d});
 const norm = s => String(s).trim().toLowerCase();
 function field(row,name){
+  if(Array.isArray(name)){
+    for(const n of name){ const v = field(row,n); if(v !== '') return v; }
+    return '';
+  }
   if(name in row) return row[name];
   const k = Object.keys(row).find(k => norm(k) === norm(name));
   return k === undefined ? '' : row[k];
@@ -182,7 +186,7 @@ function compute(){
   const get = id => V[id] || (V[id] = {id, fleet:'', km:0, alarms:0, types:{}});
   RAW.mileage.forEach(r => {
     const id = String(field(r,COL.m.id)).trim(); if(!id) return;
-    const v = get(id); v.km += num(field(r,COL.m.km));
+    const v = get(id); v.km += Math.max(0, num(field(r,COL.m.km))); // ค่าติดลบ (เลขไมล์รีเซ็ต) ไม่นำมาคิด
     const f = String(field(r,COL.m.fleet)).trim(); if(f) v.fleet = f;
   });
   RAW.alarm.forEach(r => {
