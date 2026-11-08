@@ -130,7 +130,8 @@ function field(row,name){
     return '';
   }
   if(name in row) return row[name];
-  const k = Object.keys(row).find(k => norm(k) === norm(name));
+  let k = Object.keys(row).find(k => norm(k) === norm(name));
+  if(k === undefined && /[\u0E00-\u0E7F]/.test(name)) k = Object.keys(row).find(k => norm(k).includes(norm(name)));
   return k === undefined ? '' : row[k];
 }
 function pickSheet(root,name){
@@ -148,16 +149,18 @@ function extract(json){
 
 // ====== วันที่ / เดือน ======
 const mk = (y,m) => { y = +y; m = +m; if(y > 2400) y -= 543; return (m>=1 && m<=12) ? y + '-' + String(m).padStart(2,'0') : ''; };
-function isoYm(s){ const m = String(s||'').trim().match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/); return m ? mk(m[1],m[2]) : ''; }
+function isoYm(s){ const m = String(s||'').match(/(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/); return m ? mk(m[1],m[2]) : ''; }
 function slashYm(s,dmy){
-  const m = String(s||'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(!m) return '';
+  const m = String(s||'').match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})/); if(!m) return '';
   const a = +m[1], b = +m[2];
   const mo = a > 12 ? b : b > 12 ? a : dmy ? b : a;
   return mk(m[3],mo);
 }
 function monthOfAlarm(r){ // วันที่แจ้งเตือนเป็นแบบ วัน/เดือน/ปี
   const t = (Object.entries(r).find(([k]) => norm(k).startsWith('วันและเวลา')) || [,''])[1];
-  return isoYm(t) || slashYm(t,true);
+  let y = isoYm(t) || slashYm(t,true);
+  if(!y) for(const [k,v] of Object.entries(r)){ if(k === '__ym') continue; y = isoYm(v) || slashYm(v,true); if(y) break; }
+  return y;
 }
 function monthOfMileage(r){ // ใช้ Begin Time ก่อน ถ้าอ่านไม่ได้ใช้ End Time
   const b = field(r,'Begin Time'), e = field(r,'End Time');
@@ -211,6 +214,7 @@ function compute(){
   const N = Math.max(1, num($('fN').value)), minKm = num($('fMin').value);
   const hi = num($('fHi').value), lo = num($('fLo').value);
   const fFleet = $('fFleet').value, fType = $('fType').value, ym = $('fMonth').value;
+  const alarmMonthOk = RAW.alarm.some(r => r.__ym);
   const V = {};
   const get = id => V[id] || (V[id] = {id, fleet:'', km:0, alarms:0, types:{}});
   RAW.mileage.forEach(r => {
@@ -220,7 +224,7 @@ function compute(){
     const f = String(field(r,COL.m.fleet)).trim(); if(f) v.fleet = f;
   });
   RAW.alarm.forEach(r => {
-    if(ym && r.__ym !== ym) return;
+    if(ym && alarmMonthOk && r.__ym !== ym) return;
     const id = normId(field(r,COL.a.id)); if(!id) return;
     const t = String(field(r,COL.a.type)).trim() || '(ไม่ระบุ)';
     const v = get(id);
@@ -327,9 +331,13 @@ function render(){
     : '<span class="sub">ไม่มีรถที่ไม่เตือนเลย</span>';
 
   const ymSel = $('fMonth').value;
+  const totalAl = list.reduce((a,v) => a + v.alarms, 0);
+  const noAlMonth = !RAW.alarm.some(r => r.__ym);
+  const warn = noAlMonth ? `<div class="panel noprint" style="border-color:var(--lo)"><h2 style="color:var(--lo)">อ่านวันที่ของแจ้งเตือนไม่ได้</h2><p class="hint">ตอนนี้นับแจ้งเตือนทั้งหมดโดยไม่แยกเดือน ส่งรูปข้อมูลด้านล่างให้ผมเพื่อแก้การอ่านวันที่</p>${diagHtml()}</div>` : (totalAl === 0 && RAW.alarm.length > 0) ? `<div class="panel noprint" style="border-color:var(--hi)"><h2 style="color:var(--hi)">ไม่พบแจ้งเตือนในข้อมูลที่เลือก ทั้งที่โหลดมา ${fmt(RAW.alarm.length)} รายการ</h2><p class="hint">ข้อมูลด้านล่างช่วยหาสาเหตุ (ลองเปลี่ยนเดือนเป็น “ทุกเดือน” ด้วย)</p>${diagHtml()}</div>` : '';
   const T2 = trend(), tMaxR = Math.max(...T2.map(t => t.rate), 0.0001);
   const trendPanel = T2.length > 1 ? `<section class="panel"><h2>แนวโน้มรายเดือน (${unit})</h2><p class="hint">เทียบอัตราแจ้งเตือนรวมของแต่ละเดือน ใช้ดูว่าเดือนไหนเตือนถี่หรือน้อยผิดปกติ</p>${T2.map(t => `<div class="bar" style="grid-template-columns:130px 1fr 150px"><div class="nm">${monthLabel(t.k)}</div><div class="track"><div class="fill" style="width:${t.rate/tMaxR*100}%;background:${t.k===ymSel?'var(--accent)':'var(--mute)'}"></div></div><div class="val">${fmt(t.rate,2)} (${fmt(t.al)} ครั้ง / ${fmt(t.km)} กม.)</div></div>`).join('')}</section>` : '';
   $('app').innerHTML = `
+  ${warn}
   <p class="sub" style="margin:0 0 10px">แสดงข้อมูล: <b>${ymSel ? monthLabel(ymSel) : 'ทุกเดือนรวมกัน'}</b></p>
   <div class="kpis">
    <div class="kpi"><b>${fmt(list.length)}</b><span>จำนวนรถ</span></div>
