@@ -123,6 +123,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const num = v => { const n = parseFloat(String(v ?? '').replace(/[^\d.\-]/g,'')); return isFinite(n) ? n : 0; };
 const fmt = (n,d=0) => n.toLocaleString('th-TH',{minimumFractionDigits:d,maximumFractionDigits:d});
 const norm = s => String(s).trim().toLowerCase();
+const normId = s => String(s ?? '').replace(/[\s\u200b\u00a0]/g,'').replace(/[‐‑–—−]/g,'-').toUpperCase();
 function field(row,name){
   if(Array.isArray(name)){
     for(const n of name){ const v = field(row,n); if(v !== '') return v; }
@@ -214,13 +215,13 @@ function compute(){
   const get = id => V[id] || (V[id] = {id, fleet:'', km:0, alarms:0, types:{}});
   RAW.mileage.forEach(r => {
     if(ym && r.__ym !== ym) return;
-    const id = String(field(r,COL.m.id)).trim(); if(!id) return;
+    const id = normId(field(r,COL.m.id)); if(!id) return;
     const v = get(id); v.km += Math.max(0, num(field(r,COL.m.km))); // ค่าติดลบ (เลขไมล์รีเซ็ต) ไม่นำมาคิด
     const f = String(field(r,COL.m.fleet)).trim(); if(f) v.fleet = f;
   });
   RAW.alarm.forEach(r => {
     if(ym && r.__ym !== ym) return;
-    const id = String(field(r,COL.a.id)).trim(); if(!id) return;
+    const id = normId(field(r,COL.a.id)); if(!id) return;
     const t = String(field(r,COL.a.type)).trim() || '(ไม่ระบุ)';
     const v = get(id);
     if(!v.fleet){ const f = String(field(r,COL.a.fleet)).trim(); if(f) v.fleet = f; }
@@ -245,17 +246,17 @@ function compute(){
 function trend(){
   const N = Math.max(1, num($('fN').value)), fFleet = $('fFleet').value, fType = $('fType').value;
   const fl = {};
-  RAW.mileage.forEach(r => { const id = String(field(r,COL.m.id)).trim(), f = String(field(r,COL.m.fleet)).trim(); if(id && f) fl[id] = f; });
-  RAW.alarm.forEach(r => { const id = String(field(r,COL.a.id)).trim(), f = String(field(r,COL.a.fleet)).trim(); if(id && f && !fl[id]) fl[id] = f; });
+  RAW.mileage.forEach(r => { const id = normId(field(r,COL.m.id)), f = String(field(r,COL.m.fleet)).trim(); if(id && f) fl[id] = f; });
+  RAW.alarm.forEach(r => { const id = normId(field(r,COL.a.id)), f = String(field(r,COL.a.fleet)).trim(); if(id && f && !fl[id]) fl[id] = f; });
   const M = {};
   const slot = k => M[k] || (M[k] = {km:0, al:0});
   RAW.mileage.forEach(r => {
-    const id = String(field(r,COL.m.id)).trim();
+    const id = normId(field(r,COL.m.id));
     if(!r.__ym || !id || (fFleet && fl[id] !== fFleet)) return;
     slot(r.__ym).km += Math.max(0, num(field(r,COL.m.km)));
   });
   RAW.alarm.forEach(r => {
-    const id = String(field(r,COL.a.id)).trim();
+    const id = normId(field(r,COL.a.id));
     if(!r.__ym || !id || (fFleet && fl[id] !== fFleet)) return;
     if(fType && String(field(r,COL.a.type)).trim() !== fType) return;
     slot(r.__ym).al++;
@@ -263,7 +264,34 @@ function trend(){
   return Object.keys(M).sort().map(k => ({k, ...M[k], rate: M[k].km ? M[k].al / M[k].km * N : 0}));
 }
 
+// ตรวจสอบการเชื่อมข้อมูลระหว่างชีต Mileage กับ Alarm
+function diag(){
+  const mids = new Set(RAW.mileage.map(r => normId(field(r,COL.m.id))).filter(Boolean));
+  let noId = 0, noMonth = 0, matched = 0; const unm = {}, byM = {};
+  RAW.alarm.forEach(r => {
+    const id = normId(field(r,COL.a.id));
+    if(!id) noId++; else if(mids.has(id)) matched++; else unm[id] = (unm[id]||0) + 1;
+    if(!r.__ym) noMonth++; else byM[r.__ym] = (byM[r.__ym]||0) + 1;
+  });
+  return {mids, noId, noMonth, matched, unm, byM};
+}
+
 // ====== แสดงผล ======
+function diagHtml(){
+  const d = diag(), A = RAW.alarm[0] || {}, M = RAW.mileage[0] || {};
+  const un = Object.entries(d.unm).sort((a,b) => b[1]-a[1]).slice(0,12).map(([k,c]) => esc(k) + ' (' + c + ')').join(', ') || '-';
+  const mids = [...d.mids].slice(0,8).map(esc).join(', ') || '-';
+  const bm = Object.keys(d.byM).sort().map(k => monthLabel(k) + ': ' + fmt(d.byM[k])).join(' | ') || '-';
+  const tk = Object.entries(A).find(([k]) => norm(k).startsWith('วันและเวลา'));
+  return `<div class="sub" style="line-height:1.9;margin-top:10px">
+   แจ้งเตือนทั้งหมด ${fmt(RAW.alarm.length)} รายการ: จับคู่กับรถในชีต Mileage ได้ <b>${fmt(d.matched)}</b> • จับคู่ไม่ได้ <b>${fmt(RAW.alarm.length - d.matched - d.noId)}</b> • ไม่มีหมายเลขรถ ${fmt(d.noId)} • อ่านวันที่ไม่ได้ ${fmt(d.noMonth)}<br>
+   แจ้งเตือนแยกตามเดือน: ${bm}<br>
+   ตัวอย่างหมายเลขรถที่จับคู่ไม่ได้: ${un}<br>
+   ตัวอย่างหมายเลขรถใน Mileage: ${mids}<br>
+   ค่าหมายเลขรถแถวแรกของ Alarm: ${esc(field(A,COL.a.id) || '(ว่าง)')} • ค่าวันที่แถวแรก: ${esc(tk ? tk[1] : '(ไม่พบคอลัมน์วันที่)')}<br>
+   หัวคอลัมน์ Alarm: ${esc(Object.keys(A).filter(k => k !== '__ym').join(' | '))}<br>
+   หัวคอลัมน์ Mileage: ${esc(Object.keys(M).filter(k => k !== '__ym').join(' | '))}</div>`;
+}
 function render(){
   if(!RAW) return;
   const D = compute(), {list, el, avg, N} = D;
@@ -345,7 +373,8 @@ function render(){
     <input id="q" type="search" placeholder="ค้นหาหมายเลขรถ / หน่วยงาน / สถานะ" value="${esc(query)}">
    </div>
    <div class="tw"><table><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table></div>
-  </section>`;
+  </section>
+  <details class="panel noprint"><summary style="cursor:pointer;font-weight:600">ตรวจสอบการเชื่อมข้อมูล (ใช้เมื่อตัวเลขไม่ตรง)</summary>${diagHtml()}</details>`;
 
   $('q').addEventListener('input', e => { query = e.target.value; drawTable(list); });
   drawTable(list);
