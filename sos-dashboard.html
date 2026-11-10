@@ -39,6 +39,20 @@ tr:hover td{background:var(--head)}
 .msg{padding:30px;text-align:center;color:var(--muted)}
 .err{color:var(--warn);white-space:pre-wrap;text-align:left;font-size:.8rem}
 .foot{margin-top:8px;color:var(--muted);font-size:.8rem}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px;margin-bottom:14px}
+.chart{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;min-width:0}
+.chart h3{margin:0 0 12px;font-size:1rem}
+.chart h3 small{color:var(--muted);font-weight:400}
+.cols{display:flex;gap:4px;height:190px;align-items:flex-end;overflow-x:auto}
+.col{flex:1;min-width:26px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
+.col .b{width:100%;background:var(--accent);border-radius:4px 4px 0 0;min-height:2px;opacity:.9}
+.col .b:hover{opacity:1}
+.col .v,.col .l{font-size:.7rem;color:var(--muted);height:16px;line-height:16px;white-space:nowrap}
+.hb{display:grid;grid-template-columns:minmax(90px,38%) 1fr 34px;gap:8px;align-items:center;margin-bottom:7px;font-size:.85rem}
+.hl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ht{background:var(--head);border-radius:99px;height:12px;overflow:hidden}
+.hf{background:var(--accent);height:100%;border-radius:99px}
+.hb b{text-align:right}
 </style>
 </head>
 <body>
@@ -63,12 +77,19 @@ tr:hover td{background:var(--head)}
     <input type="date" id="d2" title="ถึงวันที่">
   </div>
 
+  <div class="charts">
+    <div class="chart"><h3>📅 สถิติรายเดือน <small>(12 เดือนล่าสุด)</small></h3><div id="cMonth"></div></div>
+    <div class="chart"><h3>🗓️ สถิติรายวัน <small>(31 วันล่าสุดที่มีข้อมูล)</small></h3><div id="cDay"></div></div>
+    <div class="chart"><h3>🏢 สถิติหน่วยงาน <small>(Top 10)</small></h3><div id="cDept"></div></div>
+    <div class="chart"><h3>🧑‍✈️ สถิติคนขับ <small>(กดปุ่มบ่อยสุด Top 10)</small></h3><div id="cDriver"></div></div>
+  </div>
+
   <div class="tbl"><table id="t"></table></div>
   <div class="foot" id="foot"></div>
 </div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbz9qhMxpPpVj5noqoIVMGkhYG4ddPYe6PMiSPUOH8thoDQ0Nfk96kijjfYOX6KY0Rw/exec';
+const API = 'https://script.google.com/macros/s/AKfycbw6c8ueZVLvwLiQOg3u0rLNDy1ZsbNPlltNv5cMPSagly5KPpS2jU_LLNFB1Zn6w9w4/exec';
 
 const COLS = [
   {k:'vehicle', t:'หมายเลขรถ'},
@@ -135,7 +156,13 @@ const isoRe = /^\d{4}-\d{2}-\d{2}T/;
 function fmtDate(v){
   if (v === undefined || v === null || v === '') return '';
   if (isoRe.test(v)) return new Date(v).toLocaleDateString('en-CA',{timeZone:'Asia/Bangkok'});
-  return String(v);
+  const s = String(v).trim(), p2 = n => String(n).padStart(2,'0');
+  const fixY = y => +y > 2400 ? +y - 543 : +y;   // ปี พ.ศ. -> ค.ศ.
+  let m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  if (m) return `${fixY(m[1])}-${p2(m[2])}-${p2(m[3])}`;
+  m = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/);   // วัน/เดือน/ปี
+  if (m) return `${fixY(m[3])}-${p2(m[2])}-${p2(m[1])}`;
+  return s;
 }
 function fmtTime(v){
   if (v === undefined || v === null || v === '') return '';
@@ -159,6 +186,56 @@ function filtered(){
   });
 }
 
+// ---------- กราฟ ----------
+const EMPTY = '<div class="msg">ไม่มีข้อมูล</div>';
+const tally = (rows, f) => { const m = {}; rows.forEach(r => { const k = f(r); if (k) m[k] = (m[k]||0) + 1; }); return m; };
+
+function colChart(id, entries, every){
+  const max = Math.max(1, ...entries.map(e => e[1]));
+  $(id).innerHTML = entries.length
+    ? '<div class="cols">' + entries.map(([l,v,tip],i) =>
+        `<div class="col" title="${esc(tip||l)}: ${v} ครั้ง"><span class="v">${v||''}</span>` +
+        `<div class="b" style="height:calc((100% - 32px) * ${v/max})"></div>` +
+        `<span class="l">${i % every === 0 ? esc(l) : ''}</span></div>`).join('') + '</div>'
+    : EMPTY;
+}
+function hbar(id, entries, n){
+  const top = entries.slice(0,n), max = Math.max(1, ...top.map(e => e[1]));
+  $(id).innerHTML = top.length ? top.map(([l,v]) =>
+    `<div class="hb"><span class="hl" title="${esc(l)}">${esc(l)}</span>` +
+    `<div class="ht"><div class="hf" style="width:${v/max*100}%"></div></div><b>${v}</b></div>`).join('') : EMPTY;
+}
+
+function drawCharts(rows){
+  const dateOk = d => /^\d{4}-\d{2}-\d{2}$/.test(d);
+  const dates = rows.map(r => fmtDate(r.date)).filter(dateOk);
+
+  // รายเดือน (12 เดือนล่าสุด)
+  const mt = {}; dates.forEach(d => { const k = d.slice(0,7); mt[k] = (mt[k]||0) + 1; });
+  const months = Object.keys(mt).sort().slice(-12).map(k => {
+    const [y,m] = k.split('-');
+    return [new Date(+y, +m-1, 1).toLocaleDateString('th-TH',{month:'short',year:'2-digit'}), mt[k]];
+  });
+  colChart('cMonth', months, 1);
+
+  // รายวัน (31 วันล่าสุด นับจากวันที่ล่าสุดที่มีข้อมูล)
+  if (dates.length) {
+    const dt = {}; dates.forEach(d => dt[d] = (dt[d]||0) + 1);
+    const [y,m,d] = dates.reduce((a,b) => a > b ? a : b).split('-').map(Number);
+    const days = [];
+    for (let i = 30; i >= 0; i--) {
+      const x = new Date(Date.UTC(y, m-1, d - i)), key = x.toISOString().slice(0,10);
+      days.push([`${x.getUTCDate()}/${x.getUTCMonth()+1}`, dt[key] || 0, key]);
+    }
+    colChart('cDay', days, 3);
+  } else colChart('cDay', [], 1);
+
+  // หน่วยงาน / คนขับ
+  const sortDesc = o => Object.entries(o).sort((a,b) => b[1] - a[1]);
+  hbar('cDept',   sortDesc(tally(rows, r => String(r.dept ?? '').trim() || '(ไม่ระบุ)')), 10);
+  hbar('cDriver', sortDesc(tally(rows, r => String(r.driver ?? '').trim())), 10);
+}
+
 function render(){
   // แท็บผู้ให้บริการ
   const provs = ['ทั้งหมด', ...new Set(ALL.map(r => r.provider).filter(p => p !== 'ทั้งหมด'))];
@@ -180,6 +257,8 @@ function render(){
     ['RSC ติดต่อ', cnt('rsc')], ['Operation ติดต่อ', cnt('op')], ['NO action', cnt('none')], ['ยังไม่มีการติดต่อ', noAny]
   ].map(([l,v]) => `<div class="kpi"><span>${l}</span><b>${v}</b></div>`).join('');
 
+  drawCharts(rows);
+
   // ตาราง
   const head = COLS.map(c => `<th data-k="${c.k}">${c.t}${sortK===c.k?(sortDir>0?' ▲':' ▼'):''}</th>`).join('');
   const body = rows.map(r => '<tr>' + COLS.map(c => {
@@ -196,7 +275,9 @@ function render(){
   $('t').querySelectorAll('th').forEach(th => th.onclick = () => {
     sortDir = sortK === th.dataset.k ? -sortDir : 1; sortK = th.dataset.k; render();
   });
-  $('foot').textContent = `แสดง ${rows.length} จาก ${ALL.length} รายการ`;
+  const per = {}; ALL.forEach(r => per[r.provider] = (per[r.provider]||0) + 1);
+  $('foot').textContent = `แสดง ${rows.length} จาก ${ALL.length} รายการ · ชีทที่โหลดได้: ` +
+    Object.entries(per).map(([k,v]) => `${k} (${v})`).join(', ');
 }
 
 async function load(){
